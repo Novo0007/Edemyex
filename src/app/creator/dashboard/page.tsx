@@ -8,23 +8,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { DollarSign, BookOpen, Users, AlertTriangle } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, collectionGroup } from 'firebase/firestore';
 import type { Course, Purchase } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
 
-export default function CreatorDashboardPage() {
+const SalesChart = dynamic(() => import('@/components/sales-chart'), { 
+    ssr: false,
+    loading: () => <Skeleton className="h-[300px] w-full" />,
+});
+
+function Dashboard() {
     const { user } = useUser();
     const firestore = useFirestore();
 
@@ -35,10 +31,10 @@ export default function CreatorDashboardPage() {
     }, [firestore, user]);
     const { data: creatorCourses, isLoading: isLoadingCourses } = useCollection<Course>(creatorCoursesQuery);
 
-    // 2. Get all purchases for this creator's courses
+    // 2. Get all purchases for this creator's courses using a collectionGroup query
     const purchasesQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        // This is a collection group query to get all purchases across all users
+        // This is a collection group query to get all purchases where the creatorId matches.
         return query(collectionGroup(firestore, 'purchases'), where('creatorId', '==', user.uid));
     }, [firestore, user]);
 
@@ -148,21 +144,7 @@ export default function CreatorDashboardPage() {
         </CardHeader>
         <CardContent>
            {purchases.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={finalSalesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip 
-                        contentStyle={{
-                            backgroundColor: 'hsl(var(--background))',
-                            borderColor: 'hsl(var(--border))',
-                        }}
-                    />
-                    <Legend />
-                    <Bar dataKey="sales" fill="hsl(var(--primary))" name="Sales (INR)" />
-                    </BarChart>
-                </ResponsiveContainer>
+                <SalesChart data={finalSalesData} />
             ) : (
                 <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     <p>No sales data to display yet.</p>
@@ -172,6 +154,16 @@ export default function CreatorDashboardPage() {
       </Card>
     </div>
   );
+}
+
+export default function CreatorDashboardPage() {
+    const { isUserLoading } = useUser();
+
+    if (isUserLoading) {
+        return <CreatorDashboardSkeleton />;
+    }
+
+    return <Dashboard />;
 }
 
 

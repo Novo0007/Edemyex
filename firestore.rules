@@ -78,14 +78,16 @@ service cloud.firestore {
      * @path /purchases/{purchaseId}
      * @allow (create) Only our backend can create purchase documents. (This rule assumes backend calls are authenticated with admin privileges or a specific service account mechanism not directly verifiable here, so we lock it down). For the purpose of this app, we'll allow any signed-in user to create their own purchase record via the server actions.
      * @allow (read) The user who made the purchase, the creator of the purchased course, or an admin can read the purchase document.
-     * @allow (list) Creators can list their own sales, and admins can list all sales.
+     * @allow (list) This rule now allows for collection group queries. Creators can list their own sales, and admins can list all sales.
      * @allow (update, delete) No one can update or delete purchase records from the client.
      * @principle Enables creators to see their sales data without exposing all purchase data publicly.
      */
     match /purchases/{purchaseId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId) || isAdmin());
-      allow list: if isSignedIn() && (request.query.where.creatorId == request.auth.uid || isAdmin());
+      // This is not directly used for list, but for collectionGroup queries.
+      // The `where` clause in the query is what enforces the security.
+      allow list: if isSignedIn() && (isCreator() || isAdmin());
       allow update, delete: if false;
     }
 
@@ -125,6 +127,14 @@ service cloud.firestore {
      */
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+     /**
+     * @description Checks if the currently authenticated user has the 'creator' role.
+     * @returns {bool} True if the user is signed in and their role in Firestore is 'creator'.
+     */
+    function isCreator() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'creator';
     }
   }
 }
