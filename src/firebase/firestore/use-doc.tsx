@@ -44,24 +44,18 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start as loading
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // Explicitly do nothing if the docRef is not ready.
+    // Explicitly do nothing if the docRef is not ready. This is the primary guard.
     if (!memoizedDocRef) {
       setIsLoading(false);
       setData(null);
       setError(null);
       return;
     }
-     // This check is now redundant because of the null check above, but as a safeguard:
-    if(memoizedDocRef && !(memoizedDocRef as any).__memo) {
-        // This is a developer error, we should throw it.
-        // It's better to crash hard here than to risk an infinite loop.
-        // throw new Error('Document reference was not properly memoized using useMemoFirebase. This can cause infinite loops.');
-    }
-
+    
     setIsLoading(true);
     setError(null);
 

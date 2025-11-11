@@ -171,14 +171,12 @@ export const useFirebaseApp = (): FirebaseApp | null => {
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | null {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoized = useMemo(() => {
-    // If any dependency is null or undefined, do not execute the factory.
-    // This is the critical guard against race conditions.
     if (deps.some(dep => dep === null || typeof dep === 'undefined')) {
         return null;
     }
     return factory();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   
   if(memoized && typeof memoized === 'object') {

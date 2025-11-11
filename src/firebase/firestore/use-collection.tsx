@@ -58,11 +58,11 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start as loading
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // Explicitly do nothing if the query is not ready.
+    // Explicitly do nothing if the query is not ready. This is the primary guard.
     if (!memoizedTargetRefOrQuery) {
       setIsLoading(false);
       setData(null);
@@ -70,13 +70,6 @@ export function useCollection<T = any>(
       return;
     }
     
-    // This check is now redundant because of the null check above, but as a safeguard:
-    if(memoizedTargetRefOrQuery && !(memoizedTargetRefOrQuery as any).__memo) {
-        // This is a developer error, we should throw it.
-        // It's better to crash hard here than to risk an infinite loop.
-        // throw new Error('Query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
-    }
-
     setIsLoading(true);
     setError(null);
 
