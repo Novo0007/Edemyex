@@ -7,27 +7,60 @@ import { PlaceHolderImages } from './placeholder-images';
 // This is a server-side data fetching file.
 const { firestore, auth } = getFirebaseAdmin();
 
-const getImage = (id: string) => {
-  const image = PlaceHolderImages.find((img) => img.id === id);
-  if (!image) {
-    return {
-      imageUrl: 'https://picsum.photos/seed/error/600/400',
-      imageHint: 'abstract error',
-    };
-  }
-  return { imageUrl: image.imageUrl, imageHint: image.imageHint };
-};
-
 const coursesCollection = firestore.collection('courses');
 const usersCollection = firestore.collection('users');
 
+const ALLOWED_IMAGE_HOSTS = [
+  'images.unsplash.com',
+  'picsum.photos',
+  'storage.googleapis.com',
+  // Vercel avatars are also used and can be considered safe
+  'avatar.vercel.sh',
+];
+
+const validateAndGetImage = (course: any) => {
+    // Default placeholder in case of any issues
+    const placeholder = {
+        imageUrl: 'https://picsum.photos/seed/error/600/400',
+        imageHint: 'abstract error',
+    };
+
+    if (course.imageUrl) {
+        try {
+            const url = new URL(course.imageUrl);
+            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname)) {
+                return {
+                    imageUrl: course.imageUrl,
+                    imageHint: course.imageHint || 'course image',
+                };
+            }
+        } catch (e) {
+            // Invalid URL format, fall through to placeholder
+        }
+    }
+    
+    // If no valid imageUrl, try to find a placeholder by category
+    const categoryName = (course.category || 'default').toLowerCase();
+    const categoryImage = PlaceHolderImages.find(img => img.id.includes(categoryName));
+    
+    return categoryImage ? 
+        { imageUrl: categoryImage.imageUrl, imageHint: categoryImage.imageHint } : 
+        placeholder;
+};
+
 export async function getCourses(): Promise<Course[]> {
   try {
-    // Only fetch published courses for the public listing
     const snapshot = await coursesCollection.where('status', '==', 'published').get();
     const result: Course[] = [];
     for (const d of snapshot.docs) {
-      result.push({ ...(d.data() as any), id: d.id } as Course);
+      const courseData = d.data() as any;
+      const { imageUrl, imageHint } = validateAndGetImage(courseData);
+      result.push({ 
+          ...courseData, 
+          id: d.id,
+          imageUrl,
+          imageHint
+      } as Course);
     }
     return result;
   } catch (error) {
@@ -41,7 +74,14 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
     const docRef = coursesCollection.doc(id);
     const docSnap = await docRef.get();
     if (docSnap.exists()) {
-      return { ...docSnap.data(), id: docSnap.id } as Course;
+      const courseData = docSnap.data() as any;
+      const { imageUrl, imageHint } = validateAndGetImage(courseData);
+      return { 
+          ...courseData, 
+          id: docSnap.id,
+          imageUrl,
+          imageHint
+      } as Course;
     }
     return undefined;
   } catch (error) {
@@ -82,10 +122,19 @@ export async function getPurchasedCourses(userId: string): Promise<Course[]> {
     }
 
     try {
-        const snapshot = await coursesCollection.where('id', 'in', user.purchasedCourseIds).get();
+        // Firestore 'in' queries are limited to 30 values in the array
+        const courseIds = user.purchasedCourseIds.slice(0, 30);
+        const snapshot = await coursesCollection.where('id', 'in', courseIds).get();
         const result: Course[] = [];
         for (const d of snapshot.docs) {
-          result.push({ ...(d.data() as any), id: d.id } as Course);
+          const courseData = d.data() as any;
+          const { imageUrl, imageHint } = validateAndGetImage(courseData);
+          result.push({ 
+              ...courseData, 
+              id: d.id,
+              imageUrl,
+              imageHint,
+          } as Course);
         }
         return result;
     } catch (error) {
@@ -131,20 +180,19 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
     }
 }
 
-export async function createCourse(courseData: Omit<Course, 'id' | 'creatorId' | 'status' >, creatorId: string): Promise<Course> {
-    const docRef = coursesCollection.doc(); // Create ref with new ID
+export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 'status'>, creatorId: string): Promise<Course> {
+    const docRef = coursesCollection.doc();
 
-    const newCourseData: Course = {
-        ...courseData,
+    const newCourse: Course = {
         id: docRef.id,
         creatorId: creatorId,
-        status: 'pending' as const, // default status
+        status: 'pending',
+        ...courseData,
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
-    
-    await docRef.set(newCourseData);
-    
-    return newCourseData;
+
+    await docRef.set(newCourse);
+    return newCourse;
 }
 
 
