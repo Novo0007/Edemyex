@@ -103,6 +103,11 @@
             "type": "string",
             "description": "The role of the user (e.g., user, creator, admin).",
             "enum": ["user", "creator", "admin"]
+        },
+        "creatorStatus": {
+            "type": "string",
+            "description": "The verification status of a creator application.",
+            "enum": ["none", "pending", "approved", "rejected"]
         }
       },
       "required": [
@@ -110,7 +115,8 @@
         "name",
         "email",
         "profileImageUrl",
-        "role"
+        "role",
+        "creatorStatus"
       ]
     },
     "Purchase": {

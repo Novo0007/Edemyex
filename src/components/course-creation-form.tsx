@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { createCourseAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import AiOutlineGenerator from './ai-outline-generator';
 import { useUser } from '@/firebase';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -50,7 +52,7 @@ export default function CourseCreationForm() {
              if (result.success && result.courseId) {
                 toast({
                     title: 'Success!',
-                    description: 'Your course has been created.',
+                    description: 'Your course has been submitted for review.',
                 });
                 router.push(`/creator/courses`);
             } else if (result.errors) {
@@ -74,11 +76,45 @@ export default function CourseCreationForm() {
     router.push('/login');
     return null;
   }
-   if (user && user.role !== 'creator' && user.role !== 'admin') {
+   if (user.role !== 'creator') {
      return (
-        <div className="text-center">
-            <p className="text-destructive">You must be a creator to create courses.</p>
-        </div>
+        <Card className="w-full">
+            <CardHeader>
+                <CardTitle>Creator Access Required</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {user.creatorStatus === 'pending' && (
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Application Pending</AlertTitle>
+                        <AlertDescription>
+                            Your creator application is currently under review. You'll be able to create courses once your application is approved.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                 {user.creatorStatus === 'none' && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Not a Creator</AlertTitle>
+                        <AlertDescription>
+                            You must register as a creator to create courses. If you believe this is a mistake, please contact support.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                 {user.creatorStatus === 'rejected' && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Application Rejected</AlertTitle>
+                        <AlertDescription>
+                            Unfortunately, your creator application was not approved at this time. Please contact support for more information.
+                        </AlertDescription>
+                    </Alert>
+                )}
+            </CardContent>
+             <CardFooter>
+                 <Button onClick={() => router.back()}>Go Back</Button>
+            </CardFooter>
+        </Card>
      )
    }
 
@@ -163,7 +199,7 @@ export default function CourseCreationForm() {
           </div>
 
           <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? 'Creating Course...' : 'Create Course'}
+            {isPending ? 'Submitting for Review...' : 'Submit for Review'}
           </Button>
         </form>
       </CardContent>

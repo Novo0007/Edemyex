@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'user' | 'creator'>('user');
+  const [accountType, setAccountType] = useState<'user' | 'creator'>('user');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,14 +45,16 @@ export default function RegisterPage() {
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      // Assign admin role if the email matches
-      const finalRole = email === 'mynameisjyotirmoy@gmail.com' ? 'admin' : role;
+      const isAdmin = email === 'mynameisjyotirmoy@gmail.com';
+      const finalRole = isAdmin ? 'admin' : 'user'; // All new signups are 'user' role initially
+      const creatorStatus = isAdmin ? 'approved' : (accountType === 'creator' ? 'pending' : 'none');
 
       setDocumentNonBlocking(userDocRef, {
         id: user.uid,
         name: name,
         email: user.email,
         role: finalRole,
+        creatorStatus: creatorStatus,
         purchasedCourseIds: [],
         favoriteCreatorIds: [],
         profileImageUrl: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
@@ -60,7 +62,9 @@ export default function RegisterPage() {
 
       toast({
         title: 'Registration Successful',
-        description: 'Welcome to Edemy!',
+        description: accountType === 'creator' 
+            ? "Your creator application is pending review. We'll notify you upon approval."
+            : 'Welcome to Edemy!',
       });
       router.push('/my-courses');
 
@@ -101,18 +105,18 @@ export default function RegisterPage() {
                 <div
                   className={cn(
                     'flex-1 cursor-pointer rounded-md p-2 text-center',
-                    role === 'user' && 'bg-primary text-primary-foreground'
+                    accountType === 'user' && 'bg-primary text-primary-foreground'
                   )}
-                  onClick={() => setRole('user')}
+                  onClick={() => setAccountType('user')}
                 >
                   Learn
                 </div>
                 <div
                   className={cn(
                     'flex-1 cursor-pointer rounded-md p-2 text-center',
-                    role === 'creator' && 'bg-primary text-primary-foreground'
+                    accountType === 'creator' && 'bg-primary text-primary-foreground'
                   )}
-                  onClick={() => setRole('creator')}
+                  onClick={() => setAccountType('creator')}
                 >
                   Create
                 </div>
@@ -158,7 +162,7 @@ export default function RegisterPage() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={isLoading || !auth || !firestore}>
-              {isLoading ? <Loader2 className="animate-spin" /> : `Create ${role === 'creator' ? 'Creator' : 'Learner'} Account`}
+              {isLoading ? <Loader2 className="animate-spin" /> : `Create ${accountType === 'creator' ? 'Creator' : 'Learner'} Account`}
             </Button>
           </form>
         </CardContent>

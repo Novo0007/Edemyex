@@ -27,4 +27,5 @@ export interface User {
   purchasedCourseIds: string[];
   favoriteCreatorIds: string[];
   role: 'user' | 'creator' | 'admin';
+  creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
 }

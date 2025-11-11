@@ -59,8 +59,8 @@ export default function CreatorLayout({
     return <div className="flex h-screen items-center justify-center"><p>Loading...</p></div>
   }
   
-  // Only allow users with the 'creator' role to access this layout.
-  if (!user || (user.role !== 'creator' && user.role !== 'admin')) { 
+  // Only allow approved creators or admins to access this layout.
+  if (!user || user.role !== 'creator') { 
     notFound(); 
   }
 

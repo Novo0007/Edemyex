@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { BookOpen, Library, LogOut, Menu, PlusCircle, Search, User as UserIcon } from 'lucide-react';
+import { BookOpen, Library, LogOut, Menu, PlusCircle, Search, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -138,14 +138,14 @@ export default function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a Course</Link>
                 </DropdownMenuItem>
-                {(user.role === 'creator' || user.role === 'admin') && (
+                {user.role === 'creator' && (
                   <DropdownMenuItem asChild>
                     <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
                   </DropdownMenuItem>
                 )}
                  {user.role === 'admin' && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin"><UserIcon className="mr-2 h-4 w-4"/>Admin Dashboard</Link>
+                    <Link href="/admin"><ShieldCheck className="mr-2 h-4 w-4"/>Admin Panel</Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
