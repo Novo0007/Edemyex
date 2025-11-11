@@ -12,7 +12,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { geminiPro } from 'genkit/models';
+
 
 // Define the input schema
 const GenerateCourseImageInputSchema = z.object({
@@ -52,7 +52,7 @@ const imageGenPromptGenerator = ai.definePrompt({
 
     Course Title: {{{courseTitle}}}
     `,
-    model: geminiPro,
+    model: ai.model('gemini-pro'),
 });
 
 

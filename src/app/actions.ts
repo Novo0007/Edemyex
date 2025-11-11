@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getCourseById as getCourse, grantCourseAccess, createCourse as newCourse, getAdminUser } from '@/lib/data';
+import { getCourseById as getCourse, grantCourseAccess, newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/razorpay';
