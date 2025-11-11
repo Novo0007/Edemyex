@@ -31,9 +31,11 @@ export default function AdminCreatorsPage() {
         if (!firestore) return;
         const userRef = doc(firestore, 'users', userId);
         try {
-            const updates: { creatorStatus: string; role?: 'creator' } = { creatorStatus: newStatus };
+            const updates: { creatorStatus: string; role?: 'creator' | 'user' } = { creatorStatus: newStatus };
             if (newStatus === 'approved') {
                 updates.role = 'creator';
+            } else {
+                updates.role = 'user';
             }
             await updateDoc(userRef, updates);
             toast({

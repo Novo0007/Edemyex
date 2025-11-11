@@ -16,7 +16,7 @@ function FavoriteCreators() {
     const favoriteCreatorsQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.favoriteCreatorIds || user.favoriteCreatorIds.length === 0) return null;
         return query(collection(firestore, 'users'), where('id', 'in', user.favoriteCreatorIds));
-    }, [firestore, user?.favoriteCreatorIds]);
+    }, [firestore, user]);
 
     const { data: favoriteCreators, isLoading } = useCollection<User>(favoriteCreatorsQuery);
 
@@ -63,7 +63,7 @@ function MyCourses() {
     const purchasedCoursesQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.purchasedCourseIds || user.purchasedCourseIds.length === 0) return null;
         return query(collection(firestore, 'courses'), where('id', 'in', user.purchasedCourseIds));
-    }, [firestore, user?.purchasedCourseIds]);
+    }, [firestore, user]);
 
     const { data: purchasedCourses, isLoading } = useCollection<Course>(purchasedCoursesQuery);
 

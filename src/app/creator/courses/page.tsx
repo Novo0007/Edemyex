@@ -67,7 +67,7 @@ export default function CreatorCoursesPage() {
                   <TableCell>{course.category}</TableCell>
                   <TableCell>
                     <Badge 
-                      variant={course.status === 'published' ? 'outline' : 'secondary'}
+                      variant={course.status === 'published' ? 'outline' : course.status === 'rejected' ? 'destructive' : 'secondary'}
                       className={course.status === 'published' ? 'text-green-600 border-green-600' : ''}
                     >
                       {course.status}

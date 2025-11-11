@@ -90,7 +90,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 } else {
                      // User doc doesn't exist yet, might be in the process of creation
                      // We'll provide the basic auth user for now.
-                     setUserAuthState({ user: { ...firebaseUser, role: 'user' } as (FirebaseAuthUser & User), isUserLoading: false, userError: null });
+                     setUserAuthState({ user: { ...firebaseUser, role: 'user', creatorStatus: 'none', purchasedCourseIds: [], favoriteCreatorIds: [], profileImageUrl: '', name: firebaseUser.displayName || '', email: firebaseUser.email || '' } as (FirebaseAuthUser & User), isUserLoading: false, userError: null });
                 }
             }, (error) => {
                 console.error("FirebaseProvider: User doc snapshot error:", error);
@@ -131,13 +131,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
 /**
  * Hook to access core Firebase services and user authentication state.
- * Throws error if used outside provider.
  */
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
 
   if (context === undefined) {
-    throw new Error('useFirebase must be used within a FirebaseProvider.');
+    // This error should not be thrown in normal use, as the provider should be at the root.
+    // However, returning nulls allows components to handle the lack of services gracefully.
+    return {
+        firebaseApp: null,
+        firestore: null,
+        auth: null,
+        user: null,
+        isUserLoading: true,
+        userError: new Error('useFirebase must be used within a FirebaseProvider.')
+    }
   }
 
   return {
@@ -168,9 +176,7 @@ export const useFirebaseApp = (): FirebaseApp | null => {
   return firebaseApp;
 };
 
-type MemoFirebase <T> = T & {__memo?: boolean};
-
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | null {
+export function useMemoFirebase<T>(factory: () => T | null, deps: DependencyList): T | null {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoized = useMemo(() => {
     if (deps.some(dep => dep === null || typeof dep === 'undefined')) {
@@ -178,10 +184,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
     }
     return factory();
   }, deps);
-  
-  if(memoized && typeof memoized === 'object') {
-    (memoized as MemoFirebase<T>).__memo = true;
-  }
   
   return memoized;
 }

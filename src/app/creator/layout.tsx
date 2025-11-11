@@ -39,6 +39,8 @@ import { useAuth, useUser } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const creatorNavItems = [
   { href: '/creator/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -59,8 +61,14 @@ export default function CreatorLayout({
     return <div className="flex h-screen items-center justify-center"><p>Loading...</p></div>
   }
   
-  // Only allow approved creators or admins to access this layout.
-  if (!user || user.role !== 'creator') { 
+  // Only allow approved creators to access this layout. Admins are routed to their own dash.
+  if (!user || user.role !== 'creator') {
+    if (user && user.creatorStatus === 'pending') {
+        return <CreatorPendingPage />;
+    }
+    if (user && user.creatorStatus === 'rejected') {
+        return <CreatorRejectedPage />;
+    }
     notFound(); 
   }
 
@@ -184,4 +192,38 @@ function UserMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function CreatorPendingPage() {
+    return (
+        <div className="flex h-screen w-full items-center justify-center p-4">
+            <Alert className="max-w-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Application Pending</AlertTitle>
+                <AlertDescription>
+                    Your creator application is currently under review. You'll be able to access the creator dashboard once your application is approved.
+                    <Button asChild variant="link" className="p-0 h-auto ml-1">
+                        <Link href="/my-courses">Go to My Courses</Link>
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
+}
+
+function CreatorRejectedPage() {
+    return (
+        <div className="flex h-screen w-full items-center justify-center p-4">
+            <Alert variant="destructive" className="max-w-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Application Rejected</AlertTitle>
+                <AlertDescription>
+                    Unfortunately, your creator application was not approved at this time. Please contact support for more information.
+                     <Button asChild variant="link" className="p-0 h-auto ml-1">
+                        <Link href="/my-courses">Go to My Courses</Link>
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
 }
