@@ -163,6 +163,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    sheetTitle?: string
   }
 >(
   (
@@ -170,6 +171,7 @@ const Sidebar = React.forwardRef<
       side = "left",
       variant = "sidebar",
       collapsible = "offcanvas",
+      sheetTitle,
       className,
       children,
       ...props
@@ -207,6 +209,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            {sheetTitle && <SheetTitle className="sr-only">{sheetTitle}</SheetTitle>}
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>

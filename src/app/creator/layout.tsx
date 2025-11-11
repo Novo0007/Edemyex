@@ -42,7 +42,6 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { SheetTitle } from '@/components/ui/sheet';
 
 const creatorNavItems = [
   { href: '/creator/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -76,8 +75,7 @@ export default function CreatorLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SheetTitle className="sr-only">Creator Navigation</SheetTitle>
+      <Sidebar sheetTitle="Creator Navigation">
         <SidebarHeader>
           <div className="flex h-14 items-center gap-2 px-2">
             <Logo className="size-6 text-primary" />
