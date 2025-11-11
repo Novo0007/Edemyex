@@ -37,13 +37,12 @@ service cloud.firestore {
 
 
     match /users/{userId} {
-      // Allow reads of approved creator profiles by any signed-in user.
-      // The user themselves, or an admin, can always read the profile.
-      allow get: if isSignedIn() && ((resource.data.creatorStatus == 'approved') || isOwner(userId) || isAdmin());
+      // A user can read their own document, or an admin can read any user document.
+      // Public reads of creator profiles are removed to protect payoutDetails.
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
       
-      // Allow queries on the users collection if the user is signed in.
-      // This is needed for the 'favorite creators' feature. The `get` rule above will
-      // be enforced on each document returned by the query.
+      // Allow queries on the users collection. The more restrictive `get` rule above will
+      // be enforced on each document returned by the query, ensuring data security.
       allow list: if isSignedIn();
 
       // Only the user or an admin can modify their own profile.
