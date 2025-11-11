@@ -28,6 +28,7 @@ export interface User {
   favoriteCreatorIds: string[];
   role: 'user' | 'creator' | 'admin';
   creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  payoutRequested?: boolean;
   payoutDetails?: {
     name: string;
     email: string;

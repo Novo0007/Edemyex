@@ -109,6 +109,10 @@
             "description": "The verification status of a creator application.",
             "enum": ["none", "pending", "approved", "rejected"]
         },
+        "payoutRequested": {
+          "type": "boolean",
+          "description": "Indicates if a creator has a pending payout request."
+        },
         "payoutDetails": {
           "type": "object",
           "description": "Creator's payout information.",
@@ -229,7 +233,7 @@
       },
       "description": "Stores course information. Access control is based on the creatorId field, which links to the user who created the course. Admins can manage all courses."
     },
-    "/users/{userId}/purchases/{purchaseId}": {
+    "/purchases/{purchaseId}": {
       "schema": {
         "$ref": "#/entities/Purchase"
       },

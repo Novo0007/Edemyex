@@ -7,18 +7,57 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import PayoutDetailsForm from '@/components/payout-details-form';
-import { useUser } from '@/firebase';
-import { Banknote, Landmark, CreditCard, Mail } from 'lucide-react';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { Landmark, CreditCard } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const mockPayouts: any[] = [];
 
 export default function CreatorPayoutsPage() {
-    const { user } = useUser();
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
 
-    const hasUpi = user?.payoutDetails?.upiId;
-    const hasBank = user?.payoutDetails?.bank?.accountNumber && user?.payoutDetails?.bank?.ifsc;
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRequesting, setIsRequesting] = useState(false);
+
+    if (isUserLoading) {
+        return <div>Loading...</div>
+    }
+
+    if (!user) {
+        return <div>Please log in.</div>
+    }
+
+    const hasUpi = user.payoutDetails?.upiId;
+    const hasBank = user.payoutDetails?.bank?.accountNumber && user.payoutDetails?.bank?.ifsc;
     const payoutMethodConfigured = hasUpi || hasBank;
+
+    const handleRequestPayout = async () => {
+        if (!user || !firestore) return;
+        
+        setIsRequesting(true);
+        const userRef = doc(firestore, 'users', user.uid);
+
+        try {
+            await updateDoc(userRef, { payoutRequested: true });
+            toast({
+                title: 'Payout Requested',
+                description: 'Your request has been submitted and will be reviewed by an admin.',
+            });
+        } catch (error) {
+            toast({
+                title: 'Request Failed',
+                description: 'Could not submit your payout request.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsRequesting(false);
+        }
+    }
+
 
     return (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -106,7 +145,7 @@ export default function CreatorPayoutsPage() {
                             <CardFooter>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" className="w-full">
-                                        {payoutMethodConfigured ? 'Update' : 'Setup Payouts'}
+                                        {payoutMethodConfigured ? 'Update Payout Method' : 'Setup Payouts'}
                                     </Button>
                                 </DialogTrigger>
                             </CardFooter>
@@ -121,7 +160,13 @@ export default function CreatorPayoutsPage() {
                                 <p className="text-3xl font-bold">₹0.00</p>
                             </CardContent>
                             <CardFooter>
-                                <Button className="w-full" disabled={!payoutMethodConfigured}>Request Payout</Button>
+                                <Button 
+                                    className="w-full" 
+                                    disabled={!payoutMethodConfigured || isRequesting || user.payoutRequested}
+                                    onClick={handleRequestPayout}
+                                >
+                                     {isRequesting ? <Loader2 className="animate-spin" /> : (user.payoutRequested ? 'Request Pending' : 'Request Payout')}
+                                </Button>
                             </CardFooter>
                         </Card>
                     </div>
