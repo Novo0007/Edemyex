@@ -57,8 +57,9 @@ export async function createCourseAction(
 ) {
   if (!creatorId) {
     return {
-      ...prevState,
       errors: { _form: ['You must be logged in as a creator to create a course.'] },
+      success: false,
+      courseId: null,
     };
   }
 
@@ -75,22 +76,23 @@ export async function createCourseAction(
 
   if (!validatedFields.success) {
     return {
-      ...prevState,
       errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+      courseId: null,
     };
   }
 
   try {
     const createdCourse = await newCourse(validatedFields.data, creatorId);
     revalidatePath('/creator/courses');
-    revalidatePath('/');
-    return { ...prevState, success: true, courseId: createdCourse.id, errors: {} };
+revalidatePath('/');
+    return { success: true, courseId: createdCourse.id, errors: {} };
   } catch (error) {
     let message = 'Something went wrong.';
     if (error instanceof Error) {
         message = error.message;
     }
-    return { ...prevState, errors: { _form: [message] } };
+    return { errors: { _form: [message] }, success: false, courseId: null };
   }
 }
 

@@ -1,4 +1,4 @@
-import CourseCreationForm from '@/components/course-creation-form';
+import CourseFormContainer from './course-form-container';
 
 export default function CreateCoursePage() {
   return (
@@ -9,7 +9,7 @@ export default function CreateCoursePage() {
           Create a new course and start teaching the world.
         </p>
       </div>
-      <CourseCreationForm />
+      <CourseFormContainer />
     </div>
   );
 }

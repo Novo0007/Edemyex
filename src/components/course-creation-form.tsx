@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import AiOutlineGenerator from './ai-outline-generator';
 import { useUser } from '@/firebase';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
@@ -24,7 +23,14 @@ function SubmitButton() {
   );
 }
 
-export default function CourseCreationForm() {
+interface CourseCreationFormProps {
+    children: React.ReactNode;
+    outline: string;
+    onDescriptionChange: (value: string) => void;
+    onOutlineChange: (value: string) => void;
+}
+
+export default function CourseCreationForm({ children, outline, onDescriptionChange, onOutlineChange }: CourseCreationFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
@@ -32,13 +38,6 @@ export default function CourseCreationForm() {
   const initialState = { errors: {}, success: false, courseId: null };
   const createCourseActionWithUserId = createCourseAction.bind(null, user?.uid);
   const [state, dispatch] = useFormState(createCourseActionWithUserId, initialState);
-
-  const [description, setDescription] = useState('');
-  const [outline, setOutline] = useState('');
-
-  const handleOutlineChange = (newOutline: string) => {
-    setOutline(newOutline);
-  };
   
   useEffect(() => {
     if (state.success && state.courseId) {
@@ -148,8 +147,7 @@ export default function CourseCreationForm() {
               placeholder="Describe your course in detail..." 
               rows={5} 
               required 
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => onDescriptionChange(e.target.value)}
             />
             {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description[0]}</p>}
           </div>
@@ -166,7 +164,7 @@ export default function CourseCreationForm() {
             {state.errors?.videoUrl && <p className="text-sm text-destructive">{state.errors.videoUrl[0]}</p>}
           </div>
 
-          <AiOutlineGenerator description={description} onOutlineChange={handleOutlineChange} />
+          {children}
 
           <div className="space-y-2">
             <Label htmlFor="outline">Course Outline</Label>
@@ -177,7 +175,7 @@ export default function CourseCreationForm() {
               rows={10} 
               required 
               value={outline}
-              onChange={(e) => setOutline(e.target.value)}
+              onChange={(e) => onOutlineChange(e.target.value)}
               className="bg-background font-mono text-sm"
             />
              {state.errors?.outline && <p className="text-sm text-destructive">{state.errors.outline[0]}</p>}
