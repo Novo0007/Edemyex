@@ -21,7 +21,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     if (!id) return;
     async function fetchCourse() {
-      const courseData = await getCourseById(id as string);
+      const courseData = await getCourseById(id);
       if (courseData) {
         setCourse(courseData);
       }
