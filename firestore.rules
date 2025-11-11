@@ -2,54 +2,54 @@
  * @file Firestore Security Rules for Edemy.
  *
  * Core Philosophy:
- * This ruleset enforces a user-ownership model for user profiles, purchases, and recommendations.
- * Course ownership is based on the `creatorId` field within the course document.
- * Admins have elevated privileges to manage users and courses.
+ * This ruleset enforces a strict user-ownership model for private data (profiles, purchases, recommendations)
+ * and a creator-ownership model for public course data. It implements Role-Based Access Control (RBAC)
+ * to grant special permissions to 'creator' and 'admin' roles, with admins having universal management privileges.
+ * The rules are designed for security, performance, and clarity.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles.
- * - /courses/{courseId}: Stores course information.
- * - /users/{userId}/purchases/{purchaseId}: Stores purchase records for each user.
- * - /users/{userId}/recommendations/{recommendationId}: Stores AI-generated course recommendations for each user.
+ * - /users/{userId}: Stores user profiles, roles, and creator status.
+ * - /courses/{courseId}: Stores course information, owned by a creator.
+ * - /users/{userId}/purchases/{purchaseId}: Private subcollection for a user's purchase history.
+ * - /users/{userId}/recommendations/{recommendationId}: Private subcollection for a user's AI recommendations.
  *
  * Key Security Decisions:
- * - Users can only access their own profile data, purchases, and recommendations.
- * - Admins can read and write all user and course data for management purposes.
- * - Courses can be read by anyone, but only the creator or an admin can update or delete them.
- * - Listing of user-specific purchases and recommendations is restricted to the owning user.
- * - The rules prioritize security and simplicity, avoiding complex queries and external data lookups.
+ * - Default to deny: Access is only granted if a rule explicitly allows it.
+ * - User data is private: Users can only read and write their own documents in the `/users` collection and its subcollections.
+ * - Creator content is protected: Only the user who created a course (or an admin) can update or delete it.
+ * - Public data is read-only for most users: Anyone can browse courses, but write access is restricted.
+ * - Admins have god-mode: The 'admin' role bypasses most ownership checks for management purposes.
  *
  * Denormalization for Authorization:
- * - Course documents include a `creatorId` field to directly associate courses with their creators.
- * - User documents include a `role` field ('user', 'creator', 'admin') to manage permissions.
+ * To avoid slow and costly `get()` calls within rules, authorization data is denormalized.
+ * - The `role` ('user', 'creator', 'admin') is stored directly on the user's document.
+ * - The `creatorId` is stored directly on the course document.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows access to user profile data based on user ID or admin role.
+     * @description Secures the user profile collection.
      * @path /users/{userId}
-     * @allow (create) A user can create their own profile.
-     * @allow (get, update, delete) A user can access their own profile.
-     * @allow (list, get, update) An admin can access any user's profile.
-     * @principle Enforces document ownership for user profiles, with admin override.
+     * @allow (get, update, delete) A user can only access their own profile. Admins can access any profile.
+     * @allow (list) Only admins can list all users. This prevents users from scraping all user data.
+     * @allow (create) An authenticated user can create their own profile document. We enforce that the document ID matches their user ID.
+     * @principle Enforces document ownership for user profiles, with a specific override for admins.
      */
     match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin());
     }
 
     /**
-     * @description Allows public read access to course data. Creation, updates, and deletions are restricted to the course creator or an admin.
+     * @description Secures the public course collection.
      * @path /courses/{courseId}
-     * @allow (get, list) Any user can read course data.
-     * @allow (create) An authenticated user can create a course.
-     * @allow (update, delete) The course owner or an admin can update/delete the course.
-     * @principle Allows public reads but enforces ownership or admin privileges for writes.
+     * @allow (get, list) Anyone, including unauthenticated users, can view and list courses to browse the platform.
+     * @allow (create) An authenticated user can create a course, but we enforce that the `creatorId` in the new document matches their own UID.
+     * @allow (update, delete) Only the original course creator or an admin can modify or delete the course.
+     * @principle Allows public reads for discoverability but enforces strict ownership or admin privileges for all writes.
      */
     match /courses/{courseId} {
       allow get, list: if true;
@@ -58,38 +58,58 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows access to purchase records for a specific user.
+     * @description Secures the user-specific purchases subcollection.
      * @path /users/{userId}/purchases/{purchaseId}
-     * @allow (get, list, create, update, delete) A user can manage their own purchase records.
-     * @principle Restricts access to a user's own purchase records.
+     * @allow (read, write) A user can manage their own purchase records (CRUD). No other user can access them.
+     * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
      */
     match /users/{userId}/purchases/{purchaseId} {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Allows access to AI-generated course recommendations for a specific user.
+     * @description Secures the user-specific recommendations subcollection.
      * @path /users/{userId}/recommendations/{recommendationId}
-     * @allow (get, list, create, update, delete) A user can manage their own recommendations.
-     * @principle Restricts access to a user's own AI-generated course recommendations.
+     * @allow (read, write) A user can manage their own AI-generated recommendations. No other user can access them.
+     * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
      */
     match /users/{userId}/recommendations/{recommendationId} {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
 
-    // Helper functions
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if a user is authenticated.
+     * @returns {bool} True if a user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /**
+     * @description Checks if the currently authenticated user is the owner of the document.
+     * @param userId The ID of the user document to check against.
+     * @returns {bool} True if the requester's UID matches the provided userId.
+     */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
+    /**
+     * @description Checks if the currently authenticated user is the owner of a course.
+     * @param creatorId The ID of the course creator to check against.
+     * @returns {bool} True if the requester's UID matches the provided creatorId.
+     */
     function isCourseOwner(creatorId) {
         return request.auth.uid == creatorId;
     }
     
+    /**
+     * @description Checks if the currently authenticated user has the 'admin' role.
+     * This function performs a document read to check the user's role.
+     * @returns {bool} True if the user is signed in and their role in Firestore is 'admin'.
+     */
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
