@@ -26,7 +26,7 @@ service cloud.firestore {
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId));
 
       // Allow creators to query their own sales
-      allow list: if isSignedIn() && request.query.get('where')[0][0] == 'creatorId' && request.query.get('where')[0][2] == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where[0][0] == 'creatorId' && request.query.where[0][2] == request.auth.uid;
 
       // Allow authenticated users to create purchases for themselves
       allow create: if isSignedIn() && isOwner(request.resource.data.userId);

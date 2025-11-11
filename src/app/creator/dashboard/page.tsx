@@ -21,6 +21,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
+import SalesChart from '@/components/sales-chart';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type SalesBucket = { monthLabel: string; sales: number };
 type DashboardResponse = {
@@ -29,6 +31,40 @@ type DashboardResponse = {
   activeCourses: number;
   salesByMonth: SalesBucket[];
 };
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div>
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-4 w-2/3 mt-2" />
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                             <Skeleton className="h-4 w-1/2" />
+                             <Skeleton className="h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-8 w-1/3" />
+                            <Skeleton className="h-3 w-1/2 mt-2" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-[300px] w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
 
 export default function CreatorDashboardPage() {
   const { toast } = useToast();
@@ -51,7 +87,7 @@ export default function CreatorDashboardPage() {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error || `Failed to load dashboard (${res.status})`);
+          throw new Error(err.error || `Failed to load dashboard (${res.status})`);
         }
         const payload: DashboardResponse = await res.json();
         if (mounted) setData(payload);
@@ -70,6 +106,15 @@ export default function CreatorDashboardPage() {
     };
   }, [toast]);
 
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  const salesChartData = (data?.salesByMonth || []).map(item => ({
+    name: item.monthLabel,
+    sales: item.sales,
+  }));
+
   return (
     <div className="space-y-6">
       <div>
@@ -85,9 +130,9 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data?.totalRevenue || 0)}
+              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data?.totalRevenue || 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Last 6 months aggregate</p>
+            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
           </CardContent>
         </Card>
         <Card>
@@ -96,7 +141,7 @@ export default function CreatorDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '—' : (data?.totalStudents ?? 0)}</div>
+            <div className="text-2xl font-bold">{data?.totalStudents ?? 0}</div>
             <p className="text-xs text-muted-foreground">Unique purchasers</p>
           </CardContent>
         </Card>
@@ -106,8 +151,8 @@ export default function CreatorDashboardPage() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '—' : (data?.activeCourses ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">Created by you</p>
+            <div className="text-2xl font-bold">{data?.activeCourses ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Published courses</p>
           </CardContent>
         </Card>
       </div>
@@ -118,16 +163,7 @@ export default function CreatorDashboardPage() {
           <CardDescription>Your sales performance over the last 6 months.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={(data?.salesByMonth || []).map((x) => ({ name: x.monthLabel, sales: x.sales }))}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="sales" fill="hsl(var(--primary))" />
-            </BarChart>
-          </ResponsiveContainer>
+          <SalesChart data={salesChartData} />
         </CardContent>
       </Card>
     </div>
