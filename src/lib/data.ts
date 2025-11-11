@@ -135,10 +135,12 @@ export async function createCourse(courseData: Omit<Course, 'id' | 'creatorAvata
     if (!user) {
         throw new Error("Creator not found");
     }
+    
+    const docRef = coursesCollection.doc(); // Create ref with new ID
 
     const newCourseData = {
         ...courseData,
-        id: '',
+        id: docRef.id,
         creatorId: creatorId,
         creator: user.name,
         creatorAvatar: user.profileImageUrl,
@@ -146,11 +148,9 @@ export async function createCourse(courseData: Omit<Course, 'id' | 'creatorAvata
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
     
-    const docRef = coursesCollection.doc(); // Create ref with new ID
-    const finalCourseData = { ...newCourseData, id: docRef.id };
-    await docRef.set(finalCourseData);
+    await docRef.set(newCourseData);
     
-    return finalCourseData;
+    return newCourseData;
 }
 
 

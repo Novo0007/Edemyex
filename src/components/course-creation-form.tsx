@@ -1,7 +1,7 @@
 'use client';
 import { useFormState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { createCourseAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -33,7 +33,7 @@ interface CourseCreationFormProps {
 export default function CourseCreationForm({ children, outline, onDescriptionChange, onOutlineChange }: CourseCreationFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
 
   const initialState = { errors: {}, success: false, courseId: null };
   const createCourseActionWithUserId = createCourseAction.bind(null, user?.uid);
@@ -57,16 +57,7 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
     }
   }, [state, router, toast]);
 
-
-  if (isUserLoading) {
-    return <p>Loading...</p>;
-  }
-
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
-   if (user.role !== 'creator') {
+   if (user && user.role !== 'creator') {
      return (
         <Card className="w-full">
             <CardHeader>
@@ -189,7 +180,6 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
           
           <SubmitButton />
 
-          {state.errors?._form && <p className="text-sm font-medium text-destructive">{state.errors._form[0]}</p>}
         </form>
       </CardContent>
     </Card>
