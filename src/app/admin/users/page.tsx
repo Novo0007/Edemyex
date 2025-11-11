@@ -1,20 +1,25 @@
+'use client';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-// Mock data for users
-const mockUsers = [
-  { id: 'user-1', name: 'Alex Johnson', email: 'alex@example.com', role: 'creator', status: 'active' },
-  { id: 'user-2', name: 'Jane Doe', email: 'jane@example.com', role: 'user', status: 'active' },
-  { id: 'user-3', name: 'John Smith', email: 'john@example.com', role: 'admin', status: 'active' },
-  { id: 'user-4', name: 'Emily White', email: 'emily@example.com', role: 'user', status: 'inactive' },
-];
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function AdminUsersPage() {
+    const firestore = useFirestore();
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading } = useCollection<User>(usersQuery);
+
+    if (isLoading) {
+        return <AdminUsersSkeleton />
+    }
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,20 +40,16 @@ export default function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead><span className="sr-only">Actions</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockUsers.map((user) => (
+              {users?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                     <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.status === 'active' ? 'outline' : 'destructive'} className="border-green-600 text-green-600">{user.status}</Badge>
+                     <Badge variant={user.role === 'admin' ? 'default' : user.role === 'creator' ? 'secondary' : 'outline'}>{user.role}</Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -74,4 +75,33 @@ export default function AdminUsersPage() {
       </Card>
     </div>
   );
+}
+
+
+function AdminUsersSkeleton() {
+    return (
+         <div className="space-y-6">
+             <div>
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-4 w-2/3 mt-2" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                     <div className="space-y-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="flex items-center space-x-4">
+                                <Skeleton className="h-10 flex-1" />
+                                <Skeleton className="h-10 flex-1" />
+                                <Skeleton className="h-10 flex-1" />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+         </div>
+    )
 }

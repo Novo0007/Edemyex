@@ -1,20 +1,44 @@
+'use client';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-// Mock data for courses
-const mockCourses = [
-  { id: '1', title: 'JavaScript for Beginners', creator: 'Jane Doe', category: 'Programming', status: 'Published' },
-  { id: '2', title: 'React Masterclass', creator: 'John Smith', category: 'Programming', status: 'Published' },
-  { id: '3', title: 'The Art of Watercolor', creator: 'Emily White', category: 'Arts', status: 'Pending' },
-  { id: '4', title: 'Digital Illustration in Procreate', creator: 'Alex Green', category: 'Design', status: 'Published' },
-];
-
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import type { Course } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminCoursesPage() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const { data: courses, isLoading } = useCollection<Course>(coursesQuery);
+
+  const handleStatusChange = async (courseId: string, status: 'published' | 'rejected') => {
+    if (!firestore) return;
+    const courseRef = doc(firestore, 'courses', courseId);
+    try {
+        await setDoc(courseRef, { status }, { merge: true });
+        toast({
+            title: `Course ${status}`,
+            description: `The course has been successfully ${status}.`,
+        });
+    } catch (error) {
+        toast({
+            title: 'Error updating status',
+            description: 'There was a problem updating the course status.',
+            variant: 'destructive',
+        });
+    }
+  }
+
+  if(isLoading) {
+    return <AdminCoursesSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -40,14 +64,15 @@ export default function AdminCoursesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockCourses.map((course) => (
+              {courses?.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
                   <TableCell>{course.creator}</TableCell>
                   <TableCell>{course.category}</TableCell>
                   <TableCell>
-                    <Badge variant={course.status === 'Published' ? 'outline' : 'secondary'}
-                     className={course.status === 'Published' ? 'text-green-600 border-green-600' : ''}
+                    <Badge 
+                        variant={course.status === 'published' ? 'outline' : course.status === 'pending' ? 'secondary' : 'destructive'}
+                        className={course.status === 'published' ? 'text-green-600 border-green-600' : ''}
                     >
                       {course.status}
                     </Badge>
@@ -62,7 +87,8 @@ export default function AdminCoursesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Approve</DropdownMenuItem>
+                        {course.status === 'pending' && <DropdownMenuItem onClick={() => handleStatusChange(course.id, 'published')}>Approve</DropdownMenuItem>}
+                        {course.status === 'pending' && <DropdownMenuItem onClick={() => handleStatusChange(course.id, 'rejected')}>Reject</DropdownMenuItem>}
                         <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -76,4 +102,33 @@ export default function AdminCoursesPage() {
       </Card>
     </div>
   );
+}
+
+
+function AdminCoursesSkeleton() {
+    return (
+         <div className="space-y-6">
+             <div>
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-4 w-2/3 mt-2" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                     <div className="space-y-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="flex items-center space-x-4">
+                                <Skeleton className="h-10 flex-1" />
+                                <Skeleton className="h-10 flex-1" />
+                                <Skeleton className="h-10 flex-1" />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+         </div>
+    )
 }

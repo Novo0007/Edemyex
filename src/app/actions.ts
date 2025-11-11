@@ -1,22 +1,34 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getCourseById as getCourse, getUserById as getUser, purchaseCourse as buyCourse, createCourse as newCourse } from '@/lib/data';
+import { getCourseById as getCourse, purchaseCourse as buyCourse, createCourse as newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
+import { headers } from 'next/headers';
 
-
-// In a real app, these would interact with a database.
-// For now, they use the mock data functions from lib/data.ts
 
 export async function getCourseById(id: string) {
   return getCourse(id);
 }
 
-export async function getUserById(id: string) {
-  return getUser(id);
+// This is a protected action, we need to get the user from the session
+async function getUserIdFromSession(): Promise<string | null> {
+    const authorization = headers().get('Authorization');
+    if (authorization?.startsWith('Bearer ')) {
+        const idToken = authorization.split('Bearer ')[1];
+        try {
+            const adminUser = await getAdminUser(idToken);
+            return adminUser.uid;
+        } catch (error) {
+            console.error("Error verifying token:", error);
+            return null;
+        }
+    }
+    return null;
 }
 
+
 export async function purchaseCourse(userId: string, courseId: string) {
+  // In a real app, you'd get the userId from the session, not as an argument
   const result = await buyCourse(userId, courseId);
   if (result) {
     revalidatePath('/my-courses');
@@ -30,16 +42,18 @@ const CourseSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   category: z.string().min(1, "Category is required"),
+  outline: z.string().min(20, "Outline must be at least 20 characters"),
   imageUrl: z.string().url("Must be a valid image URL"),
   imageHint: z.string(),
 });
 
-export async function createCourseAction(formData: FormData) {
+export async function createCourseAction(creatorId: string, formData: FormData) {
   const validatedFields = CourseSchema.safeParse({
     title: formData.get('title'),
     description: formData.get('description'),
     price: formData.get('price'),
     category: formData.get('category'),
+    outline: formData.get('outline'),
     imageUrl: 'https://picsum.photos/seed/new/600/400',
     imageHint: 'abstract new',
   });
@@ -53,18 +67,22 @@ export async function createCourseAction(formData: FormData) {
   // Videos are not part of the form for simplicity, adding dummy data
   const courseData = {
     ...validatedFields.data,
-    creator: 'Alex Johnson', // Mock creator
     videos: [
       { title: 'Lesson 1', url: 'https://www.youtube.com/embed/W6NZfCO5SIk', duration: 300 },
     ],
   };
 
   try {
-    const createdCourse = await newCourse(courseData);
+    const createdCourse = await newCourse(courseData, creatorId);
+    revalidatePath('/creator/courses');
     revalidatePath('/');
     return { success: true, courseId: createdCourse.id };
   } catch (error) {
-    return { errors: { _form: ['Something went wrong.'] } };
+    let message = 'Something went wrong.';
+    if (error instanceof Error) {
+        message = error.message;
+    }
+    return { errors: { _form: [message] } };
   }
 }
 
@@ -80,5 +98,3 @@ export async function generateCourseOutline(courseTitle: string, courseDescripti
     return "There was an error generating the course outline."
   }
 }
-
-    

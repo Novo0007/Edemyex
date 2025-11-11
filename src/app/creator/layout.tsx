@@ -22,7 +22,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, notFound } from 'next/navigation';
 
 import { Logo } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -55,10 +55,13 @@ export default function CreatorLayout({
   const { user, isUserLoading } = useUser();
   const pathname = usePathname();
 
-  // In a real app, you would check for creator role from the user object.
-  // For now, we assume the user is a creator.
-  // if (isUserLoading) { ... }
-  // if (!user || user.role !== 'creator') { notFound(); }
+  if (isUserLoading) {
+    return <div className="flex h-screen items-center justify-center"><p>Loading...</p></div>
+  }
+  
+  if (!user || (user.role !== 'creator' && user.role !== 'admin')) { 
+    notFound(); 
+  }
 
   return (
     <SidebarProvider>

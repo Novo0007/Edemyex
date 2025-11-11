@@ -1,7 +1,7 @@
 'use client';
 import { useFormState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { createCourseAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import AiOutlineGenerator from './ai-outline-generator';
+import { useUser } from '@/firebase';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -24,8 +25,12 @@ function SubmitButton() {
 export default function CourseCreationForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+  const [isPending, startTransition] = useTransition();
+
   const initialState = { errors: {}, success: false, courseId: null };
-  const [state, dispatch] = useFormState(createCourseAction, initialState);
+  // `dispatch` is not directly used, but it's the action passed to the form
+  const [state, dispatch] = useFormState(createCourseAction.bind(null, user?.uid || ''), initialState);
 
   const [description, setDescription] = useState('');
   const [outline, setOutline] = useState('');
@@ -33,22 +38,49 @@ export default function CourseCreationForm() {
   const handleOutlineChange = (newOutline: string) => {
     setOutline(newOutline);
   };
-
-  useEffect(() => {
-    if (state.success && state.courseId) {
-      toast({
-        title: 'Success!',
-        description: 'Your course has been created.',
-      });
-      router.push(`/my-courses/${state.courseId}`);
-    } else if (state.errors?._form) {
-      toast({
-        title: 'Error',
-        description: state.errors._form.join(', '),
-        variant: 'destructive',
-      });
+  
+  // Wrapper for the server action to use with startTransition
+  const handleFormAction = (formData: FormData) => {
+    if (!user) {
+        toast({ title: "Authentication Error", description: "You must be logged in to create a course.", variant: "destructive" });
+        return;
     }
-  }, [state, router, toast]);
+    startTransition(() => {
+        createCourseAction(user.uid, formData).then(result => {
+             if (result.success && result.courseId) {
+                toast({
+                    title: 'Success!',
+                    description: 'Your course has been created.',
+                });
+                router.push(`/creator/courses`);
+            } else if (result.errors) {
+                const errorMessages = Object.values(result.errors).flat().join(', ');
+                toast({
+                    title: 'Error',
+                    description: errorMessages || 'Something went wrong.',
+                    variant: 'destructive',
+                });
+            }
+        });
+    });
+  };
+
+
+  if (isUserLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+   if (user && user.role !== 'creator' && user.role !== 'admin') {
+     return (
+        <div className="text-center">
+            <p className="text-destructive">You must be a creator to create courses.</p>
+        </div>
+     )
+   }
 
   return (
     <Card className="w-full">
@@ -57,7 +89,7 @@ export default function CourseCreationForm() {
         <CardDescription>Fill in the details for your new course.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={dispatch} className="space-y-6">
+        <form action={handleFormAction} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Course Title</Label>
             <Input id="title" name="title" placeholder="e.g., Introduction to Web Development" required />
@@ -118,11 +150,11 @@ export default function CourseCreationForm() {
             {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price}</p>}
           </div>
 
-          <SubmitButton />
+          <Button type="submit" disabled={isPending} className="w-full">
+            {isPending ? 'Creating Course...' : 'Create Course'}
+          </Button>
         </form>
       </CardContent>
     </Card>
   );
 }
-
-    

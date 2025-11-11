@@ -1,4 +1,5 @@
 
+
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -74,12 +75,16 @@ export default async function Home() {
           <div className="relative hidden h-80 w-full md:block">
             <div className="absolute -right-4 -top-4 size-24 rounded-full bg-accent/50" />
             <div className="absolute -bottom-8 -left-8 size-40 rounded-lg bg-primary/20" />
-            <Card className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-3 transform p-4 shadow-2xl">
-              <CourseCard course={courses[0]} className="w-72" />
-            </Card>
-            <Card className="absolute left-[calc(50%-10rem)] top-[calc(50%+4rem)] -translate-x-1/2 -translate-y-1/2 -rotate-6 transform p-4 shadow-2xl">
-              <CourseCard course={courses[2]} className="w-64" />
-            </Card>
+            {courses.length > 0 && 
+              <Card className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-3 transform p-4 shadow-2xl">
+                <CourseCard course={courses[0]} className="w-72" />
+              </Card>
+            }
+             {courses.length > 2 && 
+              <Card className="absolute left-[calc(50%-10rem)] top-[calc(50%+4rem)] -translate-x-1/2 -translate-y-1/2 -rotate-6 transform p-4 shadow-2xl">
+                <CourseCard course={courses[2]} className="w-64" />
+              </Card>
+            }
           </div>
         </div>
       </section>

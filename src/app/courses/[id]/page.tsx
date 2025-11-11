@@ -8,27 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { purchaseCourse, getCourseById, getUserById } from '@/app/actions';
+import { purchaseCourse, getCourseById } from '@/app/actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export default function CourseDetailPage({ params }: { params: { id: string } }) {
   const [course, setCourse] = useState<Course | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const { id } = params;
 
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   useEffect(() => {
     if (!id) return;
     async function fetchCourse() {
+      setIsLoading(true);
       const courseData = await getCourseById(id);
-      const userData = await getUserById('user-1');
       if (courseData) {
         setCourse(courseData);
-      }
-      if (userData) {
-        setUser(userData);
       }
       setIsLoading(false);
     }
@@ -36,8 +37,12 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
   }, [id]);
 
   const handlePurchase = async () => {
-    if (!course) return;
-    const success = await purchaseCourse('user-1', course.id);
+    if (!course || !user) {
+        toast({ title: 'Please log in to purchase a course.', variant: 'destructive'});
+        router.push('/login');
+        return;
+    };
+    const success = await purchaseCourse(user.uid, course.id);
     if (success) {
       toast({
         title: 'Purchase Successful!',
@@ -47,29 +52,37 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     } else {
       toast({
         title: 'Purchase Failed',
-        description: 'You may already own this course.',
+        description: 'You may already own this course or an error occurred.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleFavoriteCreator = () => {
-    if (!course || !user) return;
-    // This is a mock implementation. In a real app, this would be a server action.
-    const isFavorited = user.favoriteCreatorIds.includes(course.creatorAvatar);
-    if(isFavorited) {
-        toast({
-            title: 'Already a Favorite!',
-            description: `${course.creator} is already in your favorites.`,
-        });
-    } else {
-        // Mocking the update
-        const updatedUser = { ...user, favoriteCreatorIds: [...user.favoriteCreatorIds, course.creatorAvatar] };
-        setUser(updatedUser);
-        toast({
-            title: 'Creator Favorited!',
-            description: `You've added ${course.creator} to your favorites.`,
-        });
+  const isFavorited = user?.favoriteCreatorIds?.includes(course?.creatorId || '');
+
+  const handleFavoriteCreator = async () => {
+    if (!course || !user || !firestore) return;
+    
+    const userRef = doc(firestore, 'users', user.uid);
+    try {
+        if(isFavorited) {
+            await updateDoc(userRef, { favoriteCreatorIds: arrayRemove(course.creatorId) });
+            toast({
+                title: 'Creator Unfavorited',
+                description: `You've removed ${course.creator} from your favorites.`,
+            });
+        } else {
+            await updateDoc(userRef, { favoriteCreatorIds: arrayUnion(course.creatorId) });
+            toast({
+                title: 'Creator Favorited!',
+                description: `You've added ${course.creator} to your favorites.`,
+            });
+        }
+        // Note: Real-time updates should ideally be handled by a user data listener (e.g., useDoc)
+        // For now, we'll rely on a page refresh or re-navigation to see the change reflected.
+    } catch (error) {
+        toast({ title: 'Something went wrong', variant: 'destructive' });
+        console.error("Favorite error:", error);
     }
   }
 
@@ -81,7 +94,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     notFound();
   }
 
-  const totalDurationMinutes = Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60);
+  const totalDurationMinutes = course.videos ? Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60) : 0;
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -101,22 +114,24 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
             <div className="flex items-center gap-2">
                 <Avatar>
                 <AvatarImage src={course.creatorAvatar} alt={course.creator} />
-                <AvatarFallback>{course.creator.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{course.creator?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <p>
                 Created by <span className="font-semibold text-primary">{course.creator}</span>
                 </p>
             </div>
-            <Button variant="outline" size="sm" onClick={handleFavoriteCreator}>
-                <Heart className="mr-2 size-4" />
-                Favorite Creator
-            </Button>
+             {user && (
+                 <Button variant="outline" size="sm" onClick={handleFavoriteCreator}>
+                    <Heart className={cn("mr-2 size-4", isFavorited && "fill-destructive text-destructive")} />
+                    {isFavorited ? 'Favorited' : 'Favorite Creator'}
+                </Button>
+            )}
           </div>
           <Separator />
           <div className="mt-6">
             <h2 className="mb-4 font-headline text-2xl font-bold">Course content</h2>
             <div className="space-y-3">
-              {course.videos.map((video, index) => (
+              {course.videos?.map((video, index) => (
                 <div key={index} className="flex items-center justify-between rounded-lg border bg-white p-3">
                   <div className="flex items-center gap-3">
                     <Clapperboard className="size-5 text-muted-foreground" />
@@ -142,9 +157,15 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
             </div>
             <div className="p-6">
               <p className="mb-4 text-4xl font-bold text-primary">₹{course.price.toFixed(2)}</p>
-              <Button size="lg" className="w-full" onClick={handlePurchase}>
-                Buy now
-              </Button>
+               {user && user.purchasedCourseIds?.includes(course.id) ? (
+                 <Button size="lg" className="w-full" asChild>
+                    <a href={`/my-courses/${course.id}`}>Go to Course</a>
+                </Button>
+               ) : (
+                <Button size="lg" className="w-full" onClick={handlePurchase}>
+                    Buy now
+                </Button>
+               )}
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <h4 className="font-semibold text-foreground">This course includes:</h4>
                 <p className="flex items-center gap-2">
@@ -153,7 +174,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                 </p>
                 <p className="flex items-center gap-2">
                   <Clapperboard className="size-4" />
-                  <span>{course.videos.length} lessons</span>
+                  <span>{course.videos?.length || 0} lessons</span>
                 </p>
               </div>
             </div>

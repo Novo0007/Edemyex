@@ -1,48 +1,47 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
-import { CheckCircle, Clock, Clapperboard, Lock } from 'lucide-react';
-import type { Course, User } from '@/lib/types';
-import { getCourseById, getUserById } from '@/app/actions';
+import { CheckCircle, Clock, Clapperboard } from 'lucide-react';
+import type { Course } from '@/lib/types';
+import { getCourseById } from '@/app/actions';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/firebase';
 
 export default function MyCourseViewerPage({ params }: { params: { id: string } }) {
   const [course, setCourse] = useState<Course | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const { id } = params;
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
     if (!id) return;
     async function fetchData() {
-      const courseData = await getCourseById(id as string);
-      const userData = await getUserById('user-1');
+      setIsLoading(true);
+      const courseData = await getCourseById(id);
 
       if (courseData) {
         setCourse(courseData);
-        if (courseData.videos.length > 0) {
+        if (courseData.videos && courseData.videos.length > 0) {
           setActiveVideoUrl(courseData.videos[0].url);
         }
-      }
-      if (userData) {
-        setUser(userData);
       }
       setIsLoading(false);
     }
     fetchData();
   }, [id]);
 
-  if (isLoading) {
+  if (isLoading || isUserLoading) {
     return <CourseViewerSkeleton />;
   }
 
-  if (!course || !user || !user.purchasedCourses.includes(course.id)) {
+  // Security check: ensure user has purchased this course
+  if (!course || !user || !user.purchasedCourseIds?.includes(course.id)) {
     notFound();
   }
 
-  const totalDurationMinutes = Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60);
+  const totalDurationMinutes = course.videos ? Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60) : 0;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col md:flex-row">
@@ -69,13 +68,13 @@ export default function MyCourseViewerPage({ params }: { params: { id: string } 
           <div className="p-4">
             <h2 className="font-headline text-xl font-semibold">Course Content</h2>
             <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Clapperboard className="size-4" />{course.videos.length} lessons</span>
+                <span className="flex items-center gap-1.5"><Clapperboard className="size-4" />{course.videos?.length || 0} lessons</span>
                 <span className="flex items-center gap-1.5"><Clock className="size-4" />{totalDurationMinutes} min</span>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             <ul className="space-y-1 p-2">
-              {course.videos.map((video, index) => (
+              {course.videos?.map((video, index) => (
                 <li key={index}>
                   <button
                     onClick={() => setActiveVideoUrl(video.url)}

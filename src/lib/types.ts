@@ -3,6 +3,7 @@ export interface Course {
   title: string;
   description: string;
   creator: string;
+  creatorId: string;
   creatorAvatar: string;
   price: number;
   imageUrl: string;
@@ -13,15 +14,16 @@ export interface Course {
     url: string;
     duration: number; // in seconds
   }[];
+  outline: string;
+  status: 'pending' | 'published' | 'rejected';
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  avatarUrl: string;
-  purchasedCourses: string[];
-  browsingHistory: string[];
+  profileImageUrl: string;
+  purchasedCourseIds: string[];
   favoriteCreatorIds: string[];
   role: 'user' | 'creator' | 'admin';
 }
