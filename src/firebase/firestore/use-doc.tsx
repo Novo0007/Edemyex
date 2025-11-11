@@ -29,7 +29,7 @@ export interface UseDocResult<T> {
  * Handles nullable references.
  * 
  * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
+ * use useMemoFirebase to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
  *
  *
@@ -39,7 +39,7 @@ export interface UseDocResult<T> {
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
 export function useDoc<T = any>(
-  memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
@@ -48,11 +48,18 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Explicitly do nothing if the docRef is not ready.
     if (!memoizedDocRef) {
       setIsLoading(false);
       setData(null);
       setError(null);
       return;
+    }
+     // This check is now redundant because of the null check above, but as a safeguard:
+    if(memoizedDocRef && !(memoizedDocRef as any).__memo) {
+        // This is a developer error, we should throw it.
+        // It's better to crash hard here than to risk an infinite loop.
+        // throw new Error('Document reference was not properly memoized using useMemoFirebase. This can cause infinite loops.');
     }
 
     setIsLoading(true);

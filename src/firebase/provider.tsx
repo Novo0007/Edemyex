@@ -170,9 +170,9 @@ export const useFirebaseApp = (): FirebaseApp | null => {
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) | null {
   const memoized = useMemo(() => {
-    const hasNullDep = deps.some(dep => dep === null);
+    const hasNullDep = deps.some(dep => dep === null || dep === undefined);
     if (hasNullDep) return null;
     return factory();
   // eslint-disable-next-line react-hooks/exhaustive-deps

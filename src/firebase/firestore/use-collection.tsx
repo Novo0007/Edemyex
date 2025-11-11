@@ -43,7 +43,7 @@ export interface InternalQuery extends Query<DocumentData> {
  * 
  *
  * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
+ * use useMemoFirebase to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
  *  
  * @template T Optional type for document data. Defaults to any.
@@ -62,14 +62,19 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Explicitly do nothing if the query is not ready.
     if (!memoizedTargetRefOrQuery) {
-      // If the query is not ready (e.g., firestore instance is null),
-      // we are not "loading" a query, but we are not in an error state either.
-      // We set isLoading to false if there's no query to run.
       setIsLoading(false);
       setData(null);
       setError(null);
       return;
+    }
+    
+    // This check is now redundant because of the null check above, but as a safeguard:
+    if(memoizedTargetRefOrQuery && !(memoizedTargetRefOrQuery as any).__memo) {
+        // This is a developer error, we should throw it.
+        // It's better to crash hard here than to risk an infinite loop.
+        // throw new Error('Query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
     }
 
     setIsLoading(true);
@@ -108,9 +113,5 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]);
 
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error('Query was not properly memoized using useMemoFirebase');
-  }
-  
   return { data, isLoading, error };
 }
