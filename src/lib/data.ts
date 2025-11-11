@@ -22,7 +22,6 @@ const validateAndGetImage = (course: any) => {
     // Default placeholder in case of any issues
     const placeholder = {
         imageUrl: 'https://picsum.photos/seed/error/600/400',
-        imageHint: 'abstract error',
     };
 
     if (course.imageUrl) {
@@ -31,7 +30,6 @@ const validateAndGetImage = (course: any) => {
             if (ALLOWED_IMAGE_HOSTS.includes(url.hostname)) {
                 return {
                     imageUrl: course.imageUrl,
-                    imageHint: course.imageHint || 'course image',
                 };
             }
         } catch (e) {
@@ -44,7 +42,7 @@ const validateAndGetImage = (course: any) => {
     const categoryImage = PlaceHolderImages.find(img => img.id.includes(categoryName));
     
     return categoryImage ? 
-        { imageUrl: categoryImage.imageUrl, imageHint: categoryImage.imageHint } : 
+        { imageUrl: categoryImage.imageUrl } : 
         placeholder;
 };
 
@@ -54,12 +52,11 @@ export async function getCourses(): Promise<Course[]> {
     const result: Course[] = [];
     for (const d of snapshot.docs) {
       const courseData = d.data() as any;
-      const { imageUrl, imageHint } = validateAndGetImage(courseData);
+      const { imageUrl } = validateAndGetImage(courseData);
       result.push({ 
           ...courseData, 
           id: d.id,
           imageUrl,
-          imageHint
       } as Course);
     }
     return result;
@@ -75,12 +72,11 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
     const docSnap = await docRef.get();
     if (docSnap.exists()) {
       const courseData = docSnap.data() as any;
-      const { imageUrl, imageHint } = validateAndGetImage(courseData);
+      const { imageUrl } = validateAndGetImage(courseData);
       return { 
           ...courseData, 
           id: docSnap.id,
           imageUrl,
-          imageHint
       } as Course;
     }
     return undefined;
@@ -128,12 +124,11 @@ export async function getPurchasedCourses(userId: string): Promise<Course[]> {
         const result: Course[] = [];
         for (const d of snapshot.docs) {
           const courseData = d.data() as any;
-          const { imageUrl, imageHint } = validateAndGetImage(courseData);
+          const { imageUrl } = validateAndGetImage(courseData);
           result.push({ 
               ...courseData, 
               id: d.id,
               imageUrl,
-              imageHint,
           } as Course);
         }
         return result;

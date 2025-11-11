@@ -26,7 +26,6 @@ export default function CourseCard({ course, className, linkHref }: CourseCardPr
               alt={course.title}
               fill
               className="object-cover"
-              data-ai-hint={course.imageHint}
             />
              <Badge className="absolute right-2 top-2 border border-transparent bg-accent text-accent-foreground">{course.category}</Badge>
           </div>

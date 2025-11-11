@@ -152,6 +152,12 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
             {state.errors?.videoUrl && <p className="text-sm text-destructive">{state.errors.videoUrl[0]}</p>}
           </div>
 
+           <div className="space-y-2">
+            <Label htmlFor="imageUrl">Thumbnail Image URL</Label>
+            <Input id="imageUrl" name="imageUrl" placeholder="https://images.unsplash.com/..." required />
+            {state.errors?.imageUrl && <p className="text-sm text-destructive">{state.errors.imageUrl[0]}</p>}
+          </div>
+
           {children}
 
           <div className="space-y-2">

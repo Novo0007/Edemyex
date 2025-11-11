@@ -6,7 +6,6 @@ import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/razorpay';
 import { Course } from '@/lib/types';
-import { generateCourseImage } from '@/ai/ai-course-image-generation';
 
 
 export async function getCourseById(id: string) {
@@ -47,6 +46,7 @@ const CourseSchema = z.object({
   category: z.string().min(1, "Category is required"),
   outline: z.string().min(20, "Outline must be at least 20 characters"),
   videoUrl: z.string().url("Must be a valid video URL"),
+  imageUrl: z.string().url("Must be a valid image URL"),
   creator: z.string().min(1, "Creator name is required"),
   creatorAvatar: z.string().url("Creator avatar is required"),
 });
@@ -71,6 +71,7 @@ export async function createCourseAction(
     category: formData.get('category'),
     outline: formData.get('outline'),
     videoUrl: formData.get('videoUrl'),
+    imageUrl: formData.get('imageUrl'),
     creator: formData.get('creator'),
     creatorAvatar: formData.get('creatorAvatar'),
   });
@@ -84,15 +85,7 @@ export async function createCourseAction(
   }
 
   try {
-    const imageResult = await generateCourseImage({ courseTitle: validatedFields.data.title });
-    const imageUrl = imageResult.imageUrl;
-    const imageHint = imageResult.imageHint;
-
-    const courseData = {
-        ...validatedFields.data,
-        imageUrl: imageUrl,
-        imageHint: imageHint,
-    };
+    const courseData = validatedFields.data;
 
     const createdCourse = await newCourse(courseData, creatorId);
     revalidatePath('/creator/courses');

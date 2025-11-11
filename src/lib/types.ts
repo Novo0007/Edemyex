@@ -7,7 +7,6 @@ export interface Course {
   creatorAvatar: string;
   price: number;
   imageUrl: string;
-  imageHint: string;
   category: string;
   videoUrl: string;
   videos: {

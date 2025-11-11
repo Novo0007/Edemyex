@@ -207,7 +207,6 @@ export default function CourseDetailPage() {
                 alt={course.title}
                 fill
                 className="rounded-t-lg object-cover"
-                data-ai-hint={course.imageHint}
               />
             </div>
             <div className="p-6">
