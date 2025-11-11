@@ -108,7 +108,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
               />
             </div>
             <div className="p-6">
-              <p className="mb-4 text-4xl font-bold text-primary">${course.price.toFixed(2)}</p>
+              <p className="mb-4 text-4xl font-bold text-primary">₹{course.price.toFixed(2)}</p>
               <Button size="lg" className="w-full" onClick={handlePurchase}>
                 Buy now
               </Button>

@@ -47,7 +47,7 @@ export default function CourseCard({ course, className, linkHref }: CourseCardPr
               <span className="text-sm font-semibold">4.7</span>
               <span className="text-xs text-muted-foreground">(1,234)</span>
             </div>
-            <p className="text-lg font-semibold text-primary">${course.price.toFixed(2)}</p>
+            <p className="text-lg font-semibold text-primary">₹{course.price.toFixed(2)}</p>
           </div>
         </CardContent>
       </Card>

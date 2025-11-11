@@ -83,8 +83,8 @@ export default function CourseCreationForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="price">Price (USD)</Label>
-            <Input id="price" name="price" type="number" step="0.01" placeholder="e.g., 49.99" required />
+            <Label htmlFor="price">Price (INR)</Label>
+            <Input id="price" name="price" type="number" step="0.01" placeholder="e.g., 3999.00" required />
             {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price}</p>}
           </div>
 
