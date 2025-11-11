@@ -10,27 +10,30 @@ let firebaseApp: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
 
-if (typeof window !== 'undefined' && !getApps().length) {
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
-    }
+// This ensures we only initialize Firebase once on the client
+if (!getApps().length) {
+  try {
+    // Attempt to initialize via Firebase App Hosting environment variables if available
+    // This is the recommended way for production.
+    firebaseApp = initializeApp();
+  } catch (e) {
+    // Fallback to the explicit config object if auto-init fails.
+    // This is expected during local development.
+    firebaseApp = initializeApp(firebaseConfig);
+  }
 } else {
-    firebaseApp = getApp();
+  // If the app is already initialized, get the existing instance.
+  firebaseApp = getApp();
 }
 
 auth = getAuth(firebaseApp);
 firestore = getFirestore(firebaseApp);
 
+
+// Export the initialized instances
 export { firebaseApp, auth, firestore };
 
+// Export hooks and providers
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';
