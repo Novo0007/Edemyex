@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Clock, Clapperboard, Star, Heart } from 'lucide-react';
 import type { Course, User } from '@/lib/types';
@@ -20,13 +20,14 @@ declare global {
     }
 }
 
-export default function CourseDetailPage({ params }: { params: { id: string } }) {
+export default function CourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBuying, setIsBuying] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { id } = params;
+  const params = useParams();
+  const id = params.id as string;
 
   const { user } = useUser();
   const firestore = useFirestore();
