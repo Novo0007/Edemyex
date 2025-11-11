@@ -1,3 +1,4 @@
+
 import { getFirebaseAdmin } from '@/firebase/admin';
 
 import type { Course, User } from './types';
@@ -153,7 +154,7 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
             userId: userId,
             creatorId: creatorId,
             price: price,
-            purchaseDate: new Date().toISOString()
+            purchaseDate: new Date().toISOString(), // Store as ISO 8601 string
         });
 
         // Add course to user's purchased list for quick access checks

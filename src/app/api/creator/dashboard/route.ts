@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -21,7 +22,7 @@ async function getCreatorFromToken(req: NextRequest) {
         const user = userDoc.data();
         // Only allow creators or admins to access this
         if (user?.role === 'creator' || user?.role === 'admin') {
-            return user;
+            return { id: decodedToken.uid, ...user };
         }
         return null;
     } catch (error) {
@@ -87,6 +88,7 @@ export async function GET(req: NextRequest) {
         recentPurchasesSnapshot.docs.forEach(doc => {
             const purchase = doc.data();
             if (purchase.purchaseDate) {
+                 // The purchaseDate is an ISO string, so `new Date()` will parse it correctly.
                 const monthKey = format(new Date(purchase.purchaseDate), 'yyyy-MM');
                 if (salesByMonth.hasOwnProperty(monthKey)) {
                     salesByMonth[monthKey] += purchase.price || 0;
