@@ -49,17 +49,18 @@ export default function ProfilePage() {
     }
   }, [state, toast]);
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [isUserLoading, user, router]);
+
+  if (isUserLoading || !user) {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-8">
         <Skeleton className="h-96 w-full" />
       </div>
     );
-  }
-
-  if (!user) {
-    router.push('/login');
-    return null;
   }
 
   return (

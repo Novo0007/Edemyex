@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AiOutlineGenerator from '@/components/ai-outline-generator';
 import CourseCreationForm from '@/components/course-creation-form';
 import { useUser } from '@/firebase';
@@ -21,13 +22,14 @@ export default function CourseFormContainer() {
     setOutline(newOutline);
   };
   
-    if (isUserLoading) {
-        return <Skeleton className="h-96 w-full" />
-    }
+    useEffect(() => {
+        if (!isUserLoading && !user) {
+            router.push('/login');
+        }
+    }, [isUserLoading, user, router]);
 
-    if (!user) {
-        router.push('/login');
-        return null;
+    if (isUserLoading || !user) {
+        return <Skeleton className="h-96 w-full" />
     }
 
 
