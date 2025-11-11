@@ -1,16 +1,12 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getCourseById as getCourse, grantCourseAccess, newCourse, getAdminUser } from '@/lib/data';
+import { grantCourseAccess, newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/razorpay';
 import { Course } from '@/lib/types';
 
-
-export async function getCourseById(id: string) {
-  return getCourse(id);
-}
 
 // This is a protected action, we need to get the user from the session
 async function getUserIdFromSession(): Promise<string | null> {
