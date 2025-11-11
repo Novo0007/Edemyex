@@ -75,14 +75,14 @@ export default function AdminLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
         <SidebarHeader>
           <div className="flex h-14 items-center gap-2 px-2">
             <Logo className="size-6 text-primary" />
             <span className="text-lg font-semibold">Edemy Admin</span>
           </div>
         </SidebarHeader>
-        <SidebarContent className="p-2">
+        <SidebarContent>
+          <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
           <SidebarMenu>
             {adminNavItems.map(item => (
               <SidebarMenuItem key={item.label}>
