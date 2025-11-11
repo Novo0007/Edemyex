@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { cn } from '@/lib/utils';
+import { cn, getYouTubeEmbedUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -18,6 +18,8 @@ function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, i
     const [showBuyButton, setShowBuyButton] = useState(false);
     const videoRef = useRef<HTMLIFrameElement>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const embedUrl = getYouTubeEmbedUrl(course.videoUrl);
 
     useEffect(() => {
         if (isOpen) {
@@ -56,15 +58,17 @@ function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, i
                 </DialogHeader>
                 <div className="aspect-video">
                      {!showBuyButton ? (
-                        <iframe
-                            ref={videoRef}
-                            src={course.videoUrl}
-                            title="Course video preview"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="h-full w-full"
-                        ></iframe>
+                        embedUrl ? (
+                            <iframe
+                                ref={videoRef}
+                                src={embedUrl}
+                                title="Course video preview"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="h-full w-full"
+                            ></iframe>
+                        ) : <p className="p-4 text-destructive">Invalid video URL provided.</p>
                     ) : (
                         <div className="flex h-full flex-col items-center justify-center bg-background p-8 text-center">
                              <DialogHeader>

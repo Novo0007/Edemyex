@@ -53,9 +53,5 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
     notFound();
   }
 
-  return (
-    <Suspense fallback={<CourseDetailSkeleton />}>
-        <CourseDetailsClient course={course} />
-    </Suspense>
-  );
+  return <CourseDetailsClient course={course} />;
 }

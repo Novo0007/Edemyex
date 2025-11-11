@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { notFound } from 'next/navigation';
 import { CheckCircle, Clock, Clapperboard } from 'lucide-react';
 import type { Course } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, getYouTubeEmbedUrl } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
 export default function CourseViewerClient({ course }: { course: Course }) {
@@ -20,21 +20,23 @@ export default function CourseViewerClient({ course }: { course: Course }) {
   }
 
   const totalDurationMinutes = course.videos ? Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60) : 0;
+  
+  const embedUrl = activeVideoUrl ? getYouTubeEmbedUrl(activeVideoUrl) : null;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col md:flex-row">
       <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900">
         <div className="aspect-video bg-black">
-          {activeVideoUrl && (
+          {embedUrl ? (
             <iframe
-              src={activeVideoUrl}
+              src={embedUrl}
               title="Course video player"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="h-full w-full"
             ></iframe>
-          )}
+          ) : <div className="h-full w-full flex items-center justify-center text-white">Select a video to play</div>}
         </div>
         <div className="p-6">
           <h1 className="mb-2 font-headline text-3xl font-bold">{course.title}</h1>
