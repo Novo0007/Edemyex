@@ -9,6 +9,7 @@ export interface Course {
   imageUrl: string;
   imageHint: string;
   category: string;
+  videoUrl: string;
   videos: {
     title: string;
     url: string;

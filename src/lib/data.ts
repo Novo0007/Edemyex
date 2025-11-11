@@ -150,7 +150,7 @@ export async function createCourse(courseData: Omit<Course, 'id' | 'creatorAvata
         creator: user.name,
         creatorAvatar: user.profileImageUrl,
         status: 'pending', // default status
-        videos: courseData.videos || [],
+        videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
     
     const docRef = await addDoc(coursesCollection, newCourseData);

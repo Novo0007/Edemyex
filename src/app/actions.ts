@@ -44,7 +44,8 @@ const CourseSchema = z.object({
   category: z.string().min(1, "Category is required"),
   outline: z.string().min(20, "Outline must be at least 20 characters"),
   imageUrl: z.string().url("Must be a valid image URL"),
-  imageHint: z.string(),
+  videoUrl: z.string().url("Must be a valid video URL"),
+  imageHint: z.string().optional(),
 });
 
 export async function createCourseAction(creatorId: string, formData: FormData) {
@@ -54,8 +55,9 @@ export async function createCourseAction(creatorId: string, formData: FormData) 
     price: formData.get('price'),
     category: formData.get('category'),
     outline: formData.get('outline'),
-    imageUrl: 'https://picsum.photos/seed/new/600/400',
-    imageHint: 'abstract new',
+    imageUrl: formData.get('imageUrl'),
+    videoUrl: formData.get('videoUrl'),
+    imageHint: 'abstract', // default hint
   });
 
   if (!validatedFields.success) {
@@ -64,16 +66,8 @@ export async function createCourseAction(creatorId: string, formData: FormData) 
     };
   }
 
-  // Videos are not part of the form for simplicity, adding dummy data
-  const courseData = {
-    ...validatedFields.data,
-    videos: [
-      { title: 'Lesson 1', url: 'https://www.youtube.com/embed/W6NZfCO5SIk', duration: 300 },
-    ],
-  };
-
   try {
-    const createdCourse = await newCourse(courseData, creatorId);
+    const createdCourse = await newCourse(validatedFields.data, creatorId);
     revalidatePath('/creator/courses');
     revalidatePath('/');
     return { success: true, courseId: createdCourse.id };

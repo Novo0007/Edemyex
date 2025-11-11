@@ -9,8 +9,9 @@ function initializeFirebaseAdmin(): App {
         return getApps()[0];
     }
 
+    // When using Application Default Credentials, we can call initializeApp without parameters
+    // or with a config object that does not contain a 'credential' property.
     return initializeApp({
-        credential: undefined, // Use Application Default Credentials
         databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
         projectId: firebaseConfig.projectId,
     });
