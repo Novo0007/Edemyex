@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const initialState = { errors: {}, success: false, message: '' };
-  const [state, dispatch] = useFormState(updateProfileAction, initialState);
+  const [state, dispatch] = useActionState(updateProfileAction, initialState);
 
   useEffect(() => {
     if (state.success) {
