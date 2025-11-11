@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Clock, Clapperboard, Star, Heart } from 'lucide-react';
+import { Clock, Clapperboard, Star, Heart, PlayCircle } from 'lucide-react';
 import type { Course } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,10 +12,78 @@ import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
+function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+    const [showBuyButton, setShowBuyButton] = useState(false);
+    const videoRef = useRef<HTMLIFrameElement>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setShowBuyButton(false);
+             // Start a 60-second timer when the modal opens
+            timerRef.current = setTimeout(() => {
+                setShowBuyButton(true);
+                // Invalidate the video src to stop it
+                if (videoRef.current) {
+                    videoRef.current.src = '';
+                }
+            }, 60000); // 60 seconds
+        }
+
+        return () => {
+             // Cleanup timer on component unmount or if modal is closed
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [isOpen]);
+
+    const handleClose = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+        onOpenChange(false);
+    }
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={handleClose}>
+            <DialogContent className="max-w-3xl p-0">
+                <div className="aspect-video">
+                     {!showBuyButton ? (
+                        <iframe
+                            ref={videoRef}
+                            src={course.videoUrl}
+                            title="Course video preview"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="h-full w-full"
+                        ></iframe>
+                    ) : (
+                        <div className="flex h-full flex-col items-center justify-center bg-background p-8 text-center">
+                             <DialogHeader>
+                                <DialogTitle className="text-2xl font-bold">Enjoying the preview?</DialogTitle>
+                                <DialogDescription className="text-lg text-muted-foreground">
+                                    Purchase the course to get full access to all lessons and materials.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <Button size="lg" className="mt-6" asChild>
+                                <Link href={`/courses/${course.id}/checkout`}>Buy now for ₹{course.price.toFixed(2)}</Link>
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function CourseDetailsClient({ course }: { course: Course }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -40,8 +108,6 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
                 description: `You've added ${course.creator} to your favorites.`,
             });
         }
-        // Note: Real-time updates should ideally be handled by a user data listener (e.g., useDoc)
-        // For now, we'll rely on a page refresh or re-navigation to see the change reflected.
     } catch (error) {
         toast({ title: 'Something went wrong', variant: 'destructive' });
         console.error("Favorite error:", error);
@@ -55,6 +121,8 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
   const totalDurationMinutes = course.videos ? Math.floor(course.videos.reduce((acc, v) => acc + v.duration, 0) / 60) : 0;
 
   return (
+    <>
+    <VideoPreviewModal course={course} isOpen={isPreviewing} onOpenChange={setIsPreviewing} />
     <div className="container mx-auto max-w-5xl px-4 py-8">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         <div className="md:col-span-2">
@@ -104,13 +172,23 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
 
         <div className="md:col-span-1">
           <div className="sticky top-24 rounded-lg border bg-card shadow-lg">
-            <div className="relative h-56 w-full">
-              <Image
-                src={course.imageUrl}
-                alt={course.title}
-                fill
-                className="rounded-t-lg object-cover"
-              />
+             <div className="relative h-56 w-full group">
+                <Image
+                    src={course.imageUrl}
+                    alt={course.title}
+                    fill
+                    className="rounded-t-lg object-cover"
+                />
+                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-20 w-20" onClick={() => setIsPreviewing(true)}>
+                        <PlayCircle className="h-16 w-16 text-white" />
+                    </Button>
+                </div>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                    <Button variant="secondary" size="sm" className="pointer-events-none">
+                        Play Preview
+                    </Button>
+                </div>
             </div>
             <div className="p-6">
               <p className="mb-4 text-4xl font-bold text-primary">₹{course.price.toFixed(2)}</p>
@@ -139,5 +217,6 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
