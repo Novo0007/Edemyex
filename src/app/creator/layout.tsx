@@ -59,6 +59,7 @@ export default function CreatorLayout({
     return <div className="flex h-screen items-center justify-center"><p>Loading...</p></div>
   }
   
+  // Only allow users with the 'creator' role to access this layout.
   if (!user || (user.role !== 'creator' && user.role !== 'admin')) { 
     notFound(); 
   }
@@ -118,6 +119,7 @@ function UserMenu() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({

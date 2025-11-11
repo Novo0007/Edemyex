@@ -31,6 +31,7 @@ export default function Header() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({
@@ -137,9 +138,16 @@ export default function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a Course</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
-                </DropdownMenuItem>
+                {(user.role === 'creator' || user.role === 'admin') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
+                 {user.role === 'admin' && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin"><UserIcon className="mr-2 h-4 w-4"/>Admin Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                    <LogOut className="mr-2 h-4 w-4" />

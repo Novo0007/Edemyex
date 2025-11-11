@@ -23,6 +23,10 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) {
+        setError("Authentication service is not available.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
 
@@ -88,7 +92,7 @@ export default function LoginPage() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !auth}>
               {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
             </Button>
           </form>

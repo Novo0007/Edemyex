@@ -123,6 +123,7 @@ function UserMenu() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({

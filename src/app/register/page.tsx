@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { setDocumentNonBlocking } from '@/firebase';
 
@@ -31,6 +30,10 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+     if (!auth || !firestore) {
+        setError("Authentication service is not available.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
 
@@ -154,7 +157,7 @@ export default function RegisterPage() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !auth || !firestore}>
               {isLoading ? <Loader2 className="animate-spin" /> : `Create ${role === 'creator' ? 'Creator' : 'Learner'} Account`}
             </Button>
           </form>
