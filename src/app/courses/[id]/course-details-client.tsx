@@ -50,6 +50,10 @@ function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, i
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="max-w-3xl p-0">
+                 <DialogHeader className="sr-only">
+                    <DialogTitle>Course Preview: {course.title}</DialogTitle>
+                    <DialogDescription>A 1-minute preview of the course video.</DialogDescription>
+                </DialogHeader>
                 <div className="aspect-video">
                      {!showBuyButton ? (
                         <iframe
