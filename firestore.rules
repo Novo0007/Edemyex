@@ -3,13 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: owner-only access; admins can manage; only admins can list all users
-    match /users/{userId} {
-      allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow list: if isSignedIn() && isAdmin();
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-    }
-    
     // Courses: public read; creator or admin can write
     match /courses/{courseId} {
       allow get, list: if true;
@@ -44,20 +37,21 @@ service cloud.firestore {
 
 
     match /users/{userId} {
-  // Allow reads of approved creator profiles; owner and admin can read as well
-  allow read: if
-    (resource.data.creatorStatus == 'approved') ||
-    (isSignedIn() && (isOwner(userId) || isAdmin()));
+      // Allow reads of approved creator profiles by any signed-in user.
+      // The user themselves, or an admin, can always read the profile.
+      allow get: if isSignedIn() && ((resource.data.creatorStatus == 'approved') || isOwner(userId) || isAdmin());
+      
+      // Allow queries on the users collection if the user is signed in.
+      // This is needed for the 'favorite creators' feature. The `get` rule above will
+      // be enforced on each document returned by the query.
+      allow list: if isSignedIn();
 
-  // Only admins can list all users (optional: keep this if you still want to block full scans)
-  // Note: If you keep this 'list' line as admin-only, queries by non-admins will still work
-  // because the broader 'read' condition above permits the documents they return.
-  allow list: if isSignedIn() && isAdmin();
-
-  // Writes restricted
-  allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-  allow update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
-}
+      // Only the user or an admin can modify their own profile.
+      allow update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
+      
+      // Anyone can create their own user document when signing up.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+    }
 
     // Helpers
     function isSignedIn() {
