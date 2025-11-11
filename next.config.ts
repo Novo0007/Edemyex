@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  env: {
+    SERVICE_ACCOUNT_KEY: process.env.SERVICE_ACCOUNT_KEY,
+  }
 };
 
 export default nextConfig;

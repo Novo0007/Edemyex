@@ -5,30 +5,11 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-let firebaseApp: FirebaseApp;
-let auth: Auth;
-let firestore: Firestore;
-
 // This ensures we only initialize Firebase once on the client
-if (!getApps().length) {
-  try {
-    // Attempt to initialize via Firebase App Hosting environment variables if available
-    // This is the recommended way for production.
-    firebaseApp = initializeApp();
-  } catch (e) {
-    // Fallback to the explicit config object if auto-init fails.
-    // This is expected during local development.
-    firebaseApp = initializeApp(firebaseConfig);
-  }
-} else {
-  // If the app is already initialized, get the existing instance.
-  firebaseApp = getApp();
-}
+const firebaseApp: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-auth = getAuth(firebaseApp);
-firestore = getFirestore(firebaseApp);
-
+const auth: Auth = getAuth(firebaseApp);
+const firestore: Firestore = getFirestore(firebaseApp);
 
 // Export the initialized instances
 export { firebaseApp, auth, firestore };

@@ -1,4 +1,4 @@
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert, ServiceAccount } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { firebaseConfig } from './config';
@@ -9,12 +9,25 @@ function initializeFirebaseAdmin(): App {
         return getApps()[0];
     }
 
-    // When using Application Default Credentials, we can call initializeApp without parameters
-    // or with a config object that does not contain a 'credential' property.
-    return initializeApp({
-        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
-        projectId: firebaseConfig.projectId,
-    });
+    // Check for service account credentials in environment variables
+    const serviceAccount: ServiceAccount | undefined = process.env.SERVICE_ACCOUNT_KEY
+        ? JSON.parse(process.env.SERVICE_ACCOUNT_KEY)
+        : undefined;
+
+    if (serviceAccount) {
+        // Initialize with explicit service account credentials
+        return initializeApp({
+            credential: cert(serviceAccount),
+            databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
+            projectId: firebaseConfig.projectId,
+        });
+    } else {
+        // Fallback to Application Default Credentials (for deployed environments)
+        return initializeApp({
+            databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
+            projectId: firebaseConfig.projectId,
+        });
+    }
 }
 
 export function getFirebaseAdmin() {
