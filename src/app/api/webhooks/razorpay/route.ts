@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
-import { purchaseCourse } from '@/lib/data';
+import { grantCourseAccess } from '@/lib/data';
 
 const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
 
     if (event.event === 'payment.captured') {
         const payment = event.payload.payment.entity;
-        const { userId, courseId } = payment.notes;
+        const { userId, courseId, creatorId } = payment.notes;
 
-        if (userId && courseId) {
+        if (userId && courseId && creatorId) {
             console.log(`Processing purchase for userId: ${userId}, courseId: ${courseId}`);
             // Grant access to the course
-            const success = await purchaseCourse(userId, courseId);
+            const success = await grantCourseAccess(userId, courseId, creatorId, payment.amount / 100);
             if (!success) {
                  console.error(`Failed to grant course access for userId: ${userId}, courseId: ${courseId}`);
                  // You might want to add retry logic or manual alert here
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
                  console.log(`Successfully granted course access for userId: ${userId}, courseId: ${courseId}`);
             }
         } else {
-            console.warn('Webhook received without userId or courseId in notes', payment);
+            console.warn('Webhook received without required notes (userId, courseId, creatorId)', payment);
         }
     }
     

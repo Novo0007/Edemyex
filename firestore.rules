@@ -10,20 +10,21 @@
  * Data Structure:
  * - /users/{userId}: Stores user profiles, roles, and creator status.
  * - /courses/{courseId}: Stores course information, owned by a creator.
- * - /users/{userId}/purchases/{purchaseId}: Private subcollection for a user's purchase history.
+ * - /purchases/{purchaseId}: Stores all purchase records for analytics.
  * - /users/{userId}/recommendations/{recommendationId}: Private subcollection for a user's AI recommendations.
  *
  * Key Security Decisions:
  * - Default to deny: Access is only granted if a rule explicitly allows it.
- * - User data is private: Users can only read and write their own documents in the `/users` collection and its subcollections.
+ * - User data is private: Users can only read and write their own documents in the `/users` collection.
  * - Creator content is protected: Only the user who created a course (or an admin) can update or delete it.
  * - Public data is read-only for most users: Anyone can browse courses, but write access is restricted.
  * - Admins have god-mode: The 'admin' role bypasses most ownership checks for management purposes.
+ * - Purchases are write-only for users (via backend) and readable by creators and admins.
  *
  * Denormalization for Authorization:
  * To avoid slow and costly `get()` calls within rules, authorization data is denormalized.
  * - The `role` ('user', 'creator', 'admin') is stored directly on the user's document.
- * - The `creatorId` is stored directly on the course document.
+ * - The `creatorId` is stored directly on the course document and purchase document.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -41,6 +42,21 @@ service cloud.firestore {
       allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Deprecated, purchases are now in a root collection. Rules kept for safety.
+      match /purchases/{purchaseId} {
+        allow read, write: if false; 
+      }
+
+      /**
+       * @description Secures the user-specific recommendations subcollection.
+       * @path /users/{userId}/recommendations/{recommendationId}
+       * @allow (read, write) A user can manage their own AI-generated recommendations. No other user can access them.
+       * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
+       */
+      match /recommendations/{recommendationId} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
     }
 
     /**
@@ -58,24 +74,21 @@ service cloud.firestore {
     }
 
     /**
-     * @description Secures the user-specific purchases subcollection.
-     * @path /users/{userId}/purchases/{purchaseId}
-     * @allow (read, write) A user can manage their own purchase records (CRUD). No other user can access them.
-     * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
+     * @description Secures the top-level purchases collection, used for analytics and revenue tracking.
+     * @path /purchases/{purchaseId}
+     * @allow (create) Only our backend can create purchase documents. (This rule assumes backend calls are authenticated with admin privileges or a specific service account mechanism not directly verifiable here, so we lock it down). For the purpose of this app, we'll allow any signed-in user to create their own purchase record via the server actions.
+     * @allow (read) The user who made the purchase, the creator of the purchased course, or an admin can read the purchase document.
+     * @allow (list) Creators can list their own sales, and admins can list all sales.
+     * @allow (update, delete) No one can update or delete purchase records from the client.
+     * @principle Enables creators to see their sales data without exposing all purchase data publicly.
      */
-    match /users/{userId}/purchases/{purchaseId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
+    match /purchases/{purchaseId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId) || isAdmin());
+      allow list: if isSignedIn() && (request.query.where.creatorId == request.auth.uid || isAdmin());
+      allow update, delete: if false;
     }
 
-    /**
-     * @description Secures the user-specific recommendations subcollection.
-     * @path /users/{userId}/recommendations/{recommendationId}
-     * @allow (read, write) A user can manage their own AI-generated recommendations. No other user can access them.
-     * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
-     */
-    match /users/{userId}/recommendations/{recommendationId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
-    }
 
     // --- Helper Functions ---
 

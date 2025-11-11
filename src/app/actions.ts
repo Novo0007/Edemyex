@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getCourseById as getCourse, purchaseCourse as buyCourse, createCourse as newCourse, getAdminUser } from '@/lib/data';
+import { getCourseById as getCourse, grantCourseAccess, createCourse as newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/razorpay';
@@ -29,9 +29,9 @@ async function getUserIdFromSession(): Promise<string | null> {
 }
 
 
-export async function purchaseCourse(userId: string, courseId: string) {
+export async function purchaseCourse(userId: string, courseId: string, creatorId: string, price: number) {
   // In a real app, you'd get the userId from the session, not as an argument
-  const result = await buyCourse(userId, courseId);
+  const result = await grantCourseAccess(userId, courseId, creatorId, price);
   if (result) {
     revalidatePath('/my-courses');
     revalidatePath(`/courses/${courseId}`);
@@ -105,6 +105,7 @@ export async function createRazorpayOrder(course: Course, userId: string) {
         notes: {
             courseId: course.id,
             userId: userId,
+            creatorId: course.creatorId,
             courseTitle: course.title,
         }
     };

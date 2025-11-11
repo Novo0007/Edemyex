@@ -91,6 +91,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
         notes: {
             courseId: course.id,
             userId: user.uid,
+            creatorId: course.creatorId, // Pass creatorId for easier backend processing
         },
         theme: {
             color: "#3399cc"

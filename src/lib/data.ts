@@ -1,15 +1,3 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  query,
-  where,
-  serverTimestamp,
-  arrayUnion,
-} from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/firebase/admin';
 
 import type { Course, User } from './types';
@@ -29,13 +17,18 @@ const getImage = (id: string) => {
   return { imageUrl: image.imageUrl, imageHint: image.imageHint };
 };
 
-const coursesCollection = collection(firestore, 'courses');
-const usersCollection = collection(firestore, 'users');
+const coursesCollection = firestore.collection('courses');
+const usersCollection = firestore.collection('users');
 
 export async function getCourses(): Promise<Course[]> {
   try {
-    const snapshot = await getDocs(coursesCollection);
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Course));
+    // Only fetch published courses for the public listing
+    const snapshot = await coursesCollection.where('status', '==', 'published').get();
+    const result: Course[] = [];
+    for (const d of snapshot.docs) {
+      result.push({ ...(d.data() as any), id: d.id } as Course);
+    }
+    return result;
   } catch (error) {
     console.error("Error fetching courses:", error);
     return [];
@@ -44,8 +37,8 @@ export async function getCourses(): Promise<Course[]> {
 
 export async function getCourseById(id: string): Promise<Course | undefined> {
   try {
-    const docRef = doc(firestore, 'courses', id);
-    const docSnap = await getDoc(docRef);
+    const docRef = coursesCollection.doc(id);
+    const docSnap = await docRef.get();
     if (docSnap.exists()) {
       return { ...docSnap.data(), id: docSnap.id } as Course;
     }
@@ -58,8 +51,8 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
 
 export async function getUserById(userId: string): Promise<User | undefined> {
   try {
-    const docRef = doc(firestore, 'users', userId);
-    const docSnap = await getDoc(docRef);
+    const docRef = usersCollection.doc(userId);
+    const docSnap = await docRef.get();
     if (docSnap.exists()) {
       return docSnap.data() as User;
     }
@@ -88,9 +81,12 @@ export async function getPurchasedCourses(userId: string): Promise<Course[]> {
     }
 
     try {
-        const coursesQuery = query(coursesCollection, where('id', 'in', user.purchasedCourseIds));
-        const snapshot = await getDocs(coursesQuery);
-        return snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Course));
+        const snapshot = await coursesCollection.where('id', 'in', user.purchasedCourseIds).get();
+        const result: Course[] = [];
+        for (const d of snapshot.docs) {
+          result.push({ ...(d.data() as any), id: d.id } as Course);
+        }
+        return result;
     } catch (error) {
         console.error("Error fetching purchased courses:", error);
         return [];
@@ -98,41 +94,38 @@ export async function getPurchasedCourses(userId: string): Promise<Course[]> {
 }
 
 
-export async function purchaseCourse(userId: string, courseId: string): Promise<boolean> {
+export async function grantCourseAccess(userId: string, courseId: string, creatorId: string, price: number): Promise<boolean> {
     try {
-        const userRef = doc(firestore, 'users', userId);
-        const userSnap = await getDoc(userRef);
+        const userRef = usersCollection.doc(userId);
+        const userSnap = await userRef.get();
 
         if (!userSnap.exists()) return false;
-
         const userData = userSnap.data() as User;
         
-        // Prevent re-purchasing
+        // Prevent re-processing
         if (userData.purchasedCourseIds?.includes(courseId)) {
-            return false;
+            console.log(`User ${userId} already owns course ${courseId}.`);
+            return true; // Idempotent, so return success
         }
 
-        const courseRef = doc(firestore, 'courses', courseId);
-        const courseSnap = await getDoc(courseRef);
-
-        if (!courseSnap.exists()) return false;
-        const courseData = courseSnap.data() as Course;
-
-        // Create purchase record
-        const purchaseRef = collection(firestore, `users/${userId}/purchases`);
-        await addDoc(purchaseRef, {
+        // Create purchase record in a top-level `purchases` collection for easier querying
+        const purchaseRef = firestore.collection(`purchases`).doc();
+        await purchaseRef.set({
+            id: purchaseRef.id,
             courseId: courseId,
             userId: userId,
-            price: courseData.price,
-            purchaseDate: serverTimestamp()
+            creatorId: creatorId,
+            price: price,
+            purchaseDate: new Date().toISOString()
         });
 
-        // Add course to user's purchased list
-        await setDoc(userRef, { purchasedCourseIds: arrayUnion(courseId) }, { merge: true });
+        // Add course to user's purchased list for quick access checks
+        const updatedPurchased = [ ...(userData.purchasedCourseIds ?? []), courseId ];
+        await userRef.set({ purchasedCourseIds: updatedPurchased }, { merge: true });
 
         return true;
     } catch (error) {
-        console.error("Error purchasing course:", error);
+        console.error("Error granting course access:", error);
         return false;
     }
 }
@@ -149,15 +142,13 @@ export async function createCourse(courseData: Omit<Course, 'id' | 'creatorAvata
         creatorId: creatorId,
         creator: user.name,
         creatorAvatar: user.profileImageUrl,
-        status: 'pending', // default status
+        status: 'pending' as const, // default status
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
     
-    const docRef = await addDoc(coursesCollection, newCourseData);
-    
-    // update the document with its own id
+    const docRef = coursesCollection.doc(); // Create ref with new ID
     const finalCourseData = { ...newCourseData, id: docRef.id };
-    await setDoc(docRef, finalCourseData);
+    await docRef.set(finalCourseData);
     
     return finalCourseData;
 }

@@ -29,3 +29,12 @@ export interface User {
   role: 'user' | 'creator' | 'admin';
   creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
 }
+
+export interface Purchase {
+  id: string;
+  userId: string;
+  courseId: string;
+  creatorId: string;
+  purchaseDate: string; // ISO date string
+  price: number;
+}
