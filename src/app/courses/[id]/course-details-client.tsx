@@ -116,7 +116,7 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
               <p className="mb-4 text-4xl font-bold text-primary">₹{course.price.toFixed(2)}</p>
                {user && user.purchasedCourseIds?.includes(course.id) ? (
                  <Button size="lg" className="w-full" asChild>
-                    <a href={`/my-courses/${course.id}`}>Go to Course</a>
+                    <Link href={`/my-courses/${course.id}`}>Go to Course</Link>
                 </Button>
                ) : (
                 <Button size="lg" className="w-full" asChild>
