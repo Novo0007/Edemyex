@@ -20,6 +20,7 @@ import {
   Settings,
   BadgeCheck,
   LogOut,
+  ShoppingBag,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, notFound } from 'next/navigation';
@@ -44,6 +45,7 @@ const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/courses', label: 'Courses', icon: BookOpen },
   { href: '/admin/creators', label: 'Creators', icon: BadgeCheck },
+  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/payouts', label: 'Payouts', icon: DollarSign },
 ];
 
