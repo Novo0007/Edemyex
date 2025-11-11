@@ -8,93 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { createRazorpayOrder } from '@/app/actions';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-
-declare global {
-    interface Window {
-        Razorpay: any;
-    }
-}
+import Link from 'next/link';
 
 export default function CourseDetailsClient({ course }: { course: Course }) {
-  const [isBuying, setIsBuying] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const { user } = useUser();
   const firestore = useFirestore();
-
-
-  const handlePurchase = async () => {
-    if (!course || !user) {
-        toast({ title: 'Please log in to purchase a course.', variant: 'destructive'});
-        router.push('/login');
-        return;
-    };
-    
-    setIsBuying(true);
-
-    const orderResponse = await createRazorpayOrder(course, user.uid);
-
-    if (!orderResponse.success || !orderResponse.order) {
-        toast({
-            title: 'Purchase Failed',
-            description: orderResponse.error || 'Could not initiate payment.',
-            variant: 'destructive',
-        });
-        setIsBuying(false);
-        return;
-    }
-
-    const { order } = orderResponse;
-
-    const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Edemy",
-        description: `Purchase: ${course.title}`,
-        image: "/logo.png", // You should host a logo
-        order_id: order.id,
-        handler: function (response: any) {
-            // This function is called after a successful payment
-            // The webhook will handle the course access grant
-            toast({
-                title: 'Payment Successful!',
-                description: 'We are processing your purchase. You will have access shortly.',
-            });
-            router.push('/my-courses');
-        },
-        prefill: {
-            name: user.displayName || user.name,
-            email: user.email,
-        },
-        notes: {
-            courseId: course.id,
-            userId: user.uid,
-            creatorId: course.creatorId, // Pass creatorId for easier backend processing
-        },
-        theme: {
-            color: "#3399cc"
-        }
-    };
-
-    const rzp = new window.Razorpay(options);
-    
-    rzp.on('payment.failed', function (response: any) {
-        toast({
-            title: 'Payment Failed',
-            description: response.error.description || 'Something went wrong.',
-            variant: 'destructive',
-        });
-        setIsBuying(false);
-    });
-
-    rzp.open();
-  };
 
   const isFavorited = user?.favoriteCreatorIds?.includes(course?.creatorId || '');
 
@@ -195,8 +119,8 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
                     <a href={`/my-courses/${course.id}`}>Go to Course</a>
                 </Button>
                ) : (
-                <Button size="lg" className="w-full" onClick={handlePurchase} disabled={isBuying}>
-                    {isBuying ? 'Processing...' : 'Buy now'}
+                <Button size="lg" className="w-full" asChild>
+                    <Link href={`/courses/${course.id}/checkout`}>Buy now</Link>
                 </Button>
                )}
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">
