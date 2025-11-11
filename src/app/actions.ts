@@ -2,7 +2,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { grantCourseAccess, newCourse, getAdminUser } from '@/lib/data';
+import { grantCourseAccess, newCourse, getAdminUser, getCourseById as getCourseByIdData } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';
@@ -25,6 +25,9 @@ async function getUserIdFromSession(): Promise<string | null> {
     return null;
 }
 
+export async function getCourseById(id: string) {
+    return getCourseByIdData(id);
+}
 
 export async function purchaseCourse(userId: string, courseId: string, creatorId: string, price: number) {
   // In a real app, you'd get the userId from the session, not as an argument
@@ -47,10 +50,11 @@ const CourseSchema = z.object({
 });
 
 export async function createCourseAction(
-  creatorId: string | undefined, 
   prevState: { errors: any; success: boolean; courseId: string | null },
   formData: FormData
 ) {
+
+    const creatorId = await getUserIdFromSession();
   if (!creatorId) {
     return {
       errors: { _form: ['You must be logged in as a creator to create a course.'] },
@@ -80,12 +84,7 @@ export async function createCourseAction(
   try {
     const courseData = validatedFields.data;
     
-    const user = { 
-        name: formData.get('creator') as string, 
-        profileImageUrl: formData.get('creatorAvatar') as string
-    };
-
-    const createdCourse = await newCourse(courseData, user, creatorId);
+    const createdCourse = await newCourse(courseData, creatorId);
 
     revalidatePath('/creator/courses');
     revalidatePath('/');

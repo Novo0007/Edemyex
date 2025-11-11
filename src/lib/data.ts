@@ -175,12 +175,20 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
     }
 }
 
-export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 'status'>, creatorId: string): Promise<Course> {
+export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 'status' | 'creator' | 'creatorAvatar'>, creatorId: string): Promise<Course> {
     const docRef = coursesCollection.doc();
+
+    const creator = await getUserById(creatorId);
+
+    if (!creator) {
+        throw new Error('Creator not found');
+    }
 
     const newCourse: Course = {
         id: docRef.id,
         creatorId: creatorId,
+        creator: creator.name,
+        creatorAvatar: creator.profileImageUrl,
         status: 'pending',
         ...courseData,
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],

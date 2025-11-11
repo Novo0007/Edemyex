@@ -36,8 +36,7 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
   const { user } = useUser();
 
   const initialState = { errors: {}, success: false, courseId: null };
-  const createCourseActionWithUserId = createCourseAction.bind(null, user?.uid);
-  const [state, dispatch] = useFormState(createCourseActionWithUserId, initialState);
+  const [state, dispatch] = useFormState(createCourseAction, initialState);
   
   useEffect(() => {
     if (state.success && state.courseId) {
@@ -107,9 +106,6 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
       </CardHeader>
       <CardContent>
         <form action={dispatch} className="space-y-6">
-          <input type="hidden" name="creator" value={user?.name || ''} />
-          <input type="hidden" name="creatorAvatar" value={user?.profileImageUrl || ''} />
-
           <div className="space-y-2">
             <Label htmlFor="title">Course Title</Label>
             <Input id="title" name="title" placeholder="e.g., Introduction to Web Development" required />
