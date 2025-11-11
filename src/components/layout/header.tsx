@@ -1,3 +1,5 @@
+
+'use client';
 import Link from 'next/link';
 import { BookOpen, Library, Menu, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/icons';
 import { getUserById } from '@/lib/data';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useEffect, useState } from 'react';
+import type { User } from '@/lib/types';
+import { useScroll } from '@/hooks/use-scroll';
+import { cn } from '@/lib/utils';
 
 const navLinks = [
   { href: '/#courses', label: 'Browse' },
@@ -15,11 +21,27 @@ const navLinks = [
   { href: '/create', label: 'Create Course' },
 ];
 
-export default async function Header() {
-  const user = await getUserById('user-1');
+export default function Header() {
+  const [user, setUser] = useState<User | null>(null);
+  const { isScrolled, isScrollingUp } = useScroll();
+
+  useEffect(() => {
+    async function fetchUser() {
+      const userData = await getUserById('user-1');
+      if (userData) {
+        setUser(userData);
+      }
+    }
+    fetchUser();
+  }, []);
 
   return (
-    <header className="fixed top-0 z-40 w-full p-4">
+    <header
+      className={cn(
+        'fixed top-0 z-40 w-full p-4 transition-transform duration-300',
+        isScrolled && !isScrollingUp ? '-translate-y-full' : 'translate-y-0'
+      )}
+    >
       <div className="container mx-auto flex h-16 items-center rounded-full border bg-background/95 px-6 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">

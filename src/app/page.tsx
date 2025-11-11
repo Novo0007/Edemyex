@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -19,16 +20,33 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import type { Course } from '@/lib/types';
+
+const categories = [
+  { name: 'Programming', icon: <Code className="size-5" /> },
+  { name: 'Design', icon: <Palette className="size-5" /> },
+  { name: 'Music', icon: <Music className="size-5" /> },
+  { name: 'Arts', icon: <BookOpen className="size-5" /> },
+];
 
 export default async function Home() {
   const courses = await getCourses();
   const recommendedCourses = await getRecommendedCourses();
-  const categories = [
-    { name: 'Programming', icon: <Code className="size-5" /> },
-    { name: 'Design', icon: <Palette className="size-5" /> },
-    { name: 'Music', icon: <Music className="size-5" /> },
-    { name: 'Arts', icon: <BookOpen className="size-5" /> },
-  ];
+
+  const coursesByCategory = categories.reduce((acc, category) => {
+    const filteredCourses = courses.filter(course => course.category === category.name);
+    if (filteredCourses.length > 0) {
+      acc[category.name] = filteredCourses;
+    }
+    return acc;
+  }, {} as Record<string, Course[]>);
 
   return (
     <div className="flex flex-col gap-8 md:gap-12">
@@ -90,9 +108,27 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {courses.map((course) => (
-            <CourseCard key={course.id} course={course} />
+        <div className="space-y-12">
+          {Object.entries(coursesByCategory).map(([category, courses]) => (
+            <div key={category}>
+              <h3 className="mb-4 font-headline text-2xl font-bold">{category}</h3>
+              <Carousel
+                opts={{
+                  align: "start",
+                }}
+                className="w-full"
+              >
+                <CarouselContent>
+                  {courses.map((course) => (
+                    <CarouselItem key={course.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                       <CourseCard course={course} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden md:flex" />
+                <CarouselNext className="hidden md:flex"/>
+              </Carousel>
+            </div>
           ))}
         </div>
       </section>
@@ -108,11 +144,22 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {recommendedCourses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
-                  ))}
-                </div>
+                <Carousel
+                  opts={{
+                    align: "start",
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent>
+                    {recommendedCourses.map((course) => (
+                      <CarouselItem key={course.id} className="md:basis-1/2 lg:basis-1/3">
+                        <CourseCard course={course} />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="hidden md:flex" />
+                  <CarouselNext className="hidden md:flex" />
+                </Carousel>
               </CardContent>
             </Card>
           </div>

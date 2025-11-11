@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
@@ -16,8 +17,8 @@ interface CourseCardProps {
 export default function CourseCard({ course, className, linkHref }: CourseCardProps) {
   const href = linkHref || `/courses/${course.id}`;
   return (
-    <Link href={href} className="group block">
-      <Card className={cn("h-full overflow-hidden transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1", className)}>
+    <Link href={href} className="group block h-full">
+      <Card className={cn("flex h-full flex-col overflow-hidden transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1", className)}>
         <CardHeader className="p-0">
           <div className="relative h-48 w-full">
             <Image
@@ -27,11 +28,11 @@ export default function CourseCard({ course, className, linkHref }: CourseCardPr
               className="object-cover"
               data-ai-hint={course.imageHint}
             />
-             <Badge className="absolute right-2 top-2 bg-accent text-accent-foreground">{course.category}</Badge>
+             <Badge className="absolute right-2 top-2 border border-transparent bg-accent text-accent-foreground">{course.category}</Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-4">
-          <h3 className="mb-2 line-clamp-2 font-headline text-lg font-semibold">{course.title}</h3>
+        <CardContent className="flex flex-1 flex-col p-4">
+          <h3 className="mb-2 line-clamp-2 font-headline text-lg font-semibold flex-1">{course.title}</h3>
           
           <div className="mb-4 flex items-center text-sm text-muted-foreground">
              <Avatar className="mr-2 h-6 w-6">
@@ -41,7 +42,7 @@ export default function CourseCard({ course, className, linkHref }: CourseCardPr
             <span>{course.creator}</span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="mt-auto flex items-center justify-between">
             <div className="flex items-center gap-1">
               <Star className="size-4 fill-yellow-400 text-yellow-400" />
               <span className="text-sm font-semibold">4.7</span>
