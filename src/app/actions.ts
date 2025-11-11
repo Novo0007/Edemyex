@@ -2,6 +2,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getCourseById as getCourse, getUserById as getUser, purchaseCourse as buyCourse, createCourse as newCourse } from '@/lib/data';
+import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
+
 
 // In a real app, these would interact with a database.
 // For now, they use the mock data functions from lib/data.ts
@@ -66,42 +68,17 @@ export async function createCourseAction(formData: FormData) {
   }
 }
 
-export async function generateCourseOutline(topic: string): Promise<string> {
-  // In a real app, this would call a GenAI model.
-  // We're returning a mock response for demonstration.
-  if (!topic) {
-    return "Please provide a topic to generate an outline.";
+export async function generateCourseOutline(courseTitle: string, courseDescription: string): Promise<string> {
+    if (!courseTitle || !courseDescription) {
+    return "Please provide a topic and description to generate an outline.";
   }
-
-  // This simulates an AI reasoning about pedagogy
-  const usePedagogy = Math.random() > 0.5;
-  let pedagogyNote = "";
-  if (usePedagogy) {
-    pedagogyNote = `\n\n**Pedagogical Note:** To enhance learning retention, consider incorporating a small, practical project after Module 2 and a peer-review session at the end of Module 3. This follows the constructivist learning theory where learners build knowledge through active participation.`;
+  try {
+    const result = await suggestCourseOutline({ courseTitle, courseDescription });
+    return result.courseOutline;
+  } catch(e) {
+    console.error(e);
+    return "There was an error generating the course outline."
   }
-
-  return `Here is a suggested course outline for "${topic}":
-
-**Module 1: Introduction & Core Concepts**
--   Lesson 1.1: What is ${topic} and Why is it Important?
--   Lesson 1.2: History and Evolution
--   Lesson 1.3: Fundamental Principles
--   Lesson 1.4: Key Terminology
-
-**Module 2: Getting Started**
--   Lesson 2.1: Setting Up Your Environment/Tools
--   Lesson 2.2: Your First Project: "Hello, World!" equivalent
--   Lesson 2.3: Understanding the Basic Workflow
-
-**Module 3: Intermediate Techniques**
--   Lesson 3.1: Exploring Advanced Feature A
--   Lesson 3.2: Deep Dive into Feature B
--   Lesson 3.3: Common Pitfalls and How to Avoid Them
-
-**Module 4: Advanced Topics & Best Practices**
--   Lesson 4.1: Performance Optimization
--   Lesson 4.2: Integrating with Other Technologies
--   Lesson 4.3: Real-World Case Study
--   Lesson 4.4: Future Trends in ${topic}${pedagogyNote}
-`;
 }
+
+    

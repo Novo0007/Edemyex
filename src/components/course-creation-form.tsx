@@ -1,7 +1,7 @@
 'use client';
 import { useFormState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createCourseAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,13 @@ export default function CourseCreationForm() {
   const { toast } = useToast();
   const initialState = { errors: {}, success: false, courseId: null };
   const [state, dispatch] = useFormState(createCourseAction, initialState);
+
+  const [description, setDescription] = useState('');
+  const [outline, setOutline] = useState('');
+
+  const handleOutlineChange = (newOutline: string) => {
+    setOutline(newOutline);
+  };
 
   useEffect(() => {
     if (state.success && state.courseId) {
@@ -74,12 +81,35 @@ export default function CourseCreationForm() {
             {state.errors?.category && <p className="text-sm text-destructive">{state.errors.category}</p>}
           </div>
           
-          <AiOutlineGenerator />
+           <div className="space-y-2">
+            <Label htmlFor="description">Course Description</Label>
+            <Textarea 
+              id="description" 
+              name="description" 
+              placeholder="Describe your course in detail..." 
+              rows={5} 
+              required 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description}</p>}
+          </div>
+
+          <AiOutlineGenerator description={description} onOutlineChange={handleOutlineChange} />
 
           <div className="space-y-2">
-            <Label htmlFor="description">Course Description</Label>
-            <Textarea id="description" name="description" placeholder="Describe your course in detail..." rows={8} required />
-            {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description}</p>}
+            <Label htmlFor="outline">Course Outline</Label>
+            <Textarea 
+              id="outline" 
+              name="outline" 
+              placeholder="Your generated or manually written course outline..." 
+              rows={10} 
+              required 
+              value={outline}
+              onChange={(e) => setOutline(e.target.value)}
+              className="bg-background font-mono text-sm"
+            />
+             {state.errors?.outline && <p className="text-sm text-destructive">{state.errors.outline}</p>}
           </div>
 
           <div className="space-y-2">
@@ -94,3 +124,5 @@ export default function CourseCreationForm() {
     </Card>
   );
 }
+
+    

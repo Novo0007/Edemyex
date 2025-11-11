@@ -63,3 +63,5 @@ const courseRecommendationFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
