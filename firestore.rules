@@ -9,7 +9,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
     }
-
+    
     // Courses: public read; creator or admin can write
     match /courses/{courseId} {
       allow get, list: if true;
@@ -26,6 +26,22 @@ service cloud.firestore {
     match /users/{userId}/recommendations/{recommendationId} {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
+    
+    // Top-level purchases collection rules
+    match /purchases/{purchaseId} {
+      // Allow user who made purchase OR the creator of the course to read.
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId));
+
+      // Allow creators to query their own sales
+      allow list: if isSignedIn() && request.query.get('where')[0][0] == 'creatorId' && request.query.get('where')[0][2] == request.auth.uid;
+
+      // Allow authenticated users to create purchases for themselves
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+
+      // Disallow updates and deletes for data integrity
+      allow update, delete: if false;
+    }
+
 
     match /users/{userId} {
   // Allow reads of approved creator profiles; owner and admin can read as well
