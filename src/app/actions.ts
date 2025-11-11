@@ -48,6 +48,8 @@ const CourseSchema = z.object({
   imageUrl: z.string().url("Must be a valid image URL"),
   videoUrl: z.string().url("Must be a valid video URL"),
   imageHint: z.string().optional(),
+  creator: z.string().min(1, "Creator name is required"),
+  creatorAvatar: z.string().url("Creator avatar is required"),
 });
 
 export async function createCourseAction(
@@ -72,6 +74,8 @@ export async function createCourseAction(
     imageUrl: formData.get('imageUrl'),
     videoUrl: formData.get('videoUrl'),
     imageHint: 'abstract', // default hint
+    creator: formData.get('creator'),
+    creatorAvatar: formData.get('creatorAvatar'),
   });
 
   if (!validatedFields.success) {
