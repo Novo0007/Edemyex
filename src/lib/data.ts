@@ -27,7 +27,7 @@ const validateAndGetImage = (course: any) => {
     if (course.imageUrl) {
         try {
             const url = new URL(course.imageUrl);
-            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname)) {
+            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname) || course.imageUrl.startsWith('data:image')) {
                 return {
                     imageUrl: course.imageUrl,
                 };
@@ -70,7 +70,7 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
   try {
     const docRef = coursesCollection.doc(id);
     const docSnap = await docRef.get();
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
       const courseData = docSnap.data() as any;
       const { imageUrl } = validateAndGetImage(courseData);
       return { 
@@ -90,7 +90,7 @@ export async function getUserById(userId: string): Promise<User | undefined> {
   try {
     const docRef = usersCollection.doc(userId);
     const docSnap = await docRef.get();
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
       return docSnap.data() as User;
     }
     return undefined;
@@ -144,7 +144,7 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
         const userRef = usersCollection.doc(userId);
         const userSnap = await userRef.get();
 
-        if (!userSnap.exists()) return false;
+        if (!userSnap.exists) return false;
         const userData = userSnap.data() as User;
         
         // Prevent re-processing
