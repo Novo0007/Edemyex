@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { getAuth } from 'firebase/auth';
 import {
   Card,
   CardContent,
@@ -7,98 +9,74 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DollarSign, BookOpen, Users, AlertTriangle } from 'lucide-react';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
-import type { Course, Purchase } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import dynamic from 'next/dynamic';
+import { DollarSign, BookOpen, Users } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import { useToast } from '@/hooks/use-toast';
 
-const SalesChart = dynamic(() => import('@/components/sales-chart'), { 
-    ssr: false,
-    loading: () => <Skeleton className="h-[300px] w-full" />,
-});
+type SalesBucket = { monthLabel: string; sales: number };
+type DashboardResponse = {
+  totalRevenue: number;
+  totalStudents: number;
+  activeCourses: number;
+  salesByMonth: SalesBucket[];
+};
 
-function Dashboard() {
-    const { user } = useUser();
-    const firestore = useFirestore();
+export default function CreatorDashboardPage() {
+  const { toast } = useToast();
+  const [data, setData] = useState<DashboardResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-    // 1. Get all courses for the current creator
-    const creatorCoursesQuery = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        return query(collection(firestore, 'courses'), where('creatorId', '==', user.uid));
-    }, [firestore, user]);
-    const { data: creatorCourses, isLoading: isLoadingCourses } = useCollection<Course>(creatorCoursesQuery);
-
-    // 2. Get all purchases for this creator's courses using a collectionGroup query
-    const purchasesQuery = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        // This is a collection group query to get all purchases where the creatorId matches.
-        return query(collectionGroup(firestore, 'purchases'), where('creatorId', '==', user.uid));
-    }, [firestore, user]);
-
-    const { data: purchases, isLoading: isLoadingPurchases } = useCollection<Purchase>(purchasesQuery);
-
-    const isLoading = isLoadingCourses || isLoadingPurchases;
-
-    if (isLoading) {
-        return <CreatorDashboardSkeleton />;
-    }
-
-    if (!creatorCourses || !purchases) {
-        return (
-             <div className="flex h-full items-center justify-center">
-                <Card className="m-4">
-                    <CardHeader className="flex flex-row items-center gap-4">
-                        <AlertTriangle className="size-8 text-destructive" />
-                        <div>
-                            <CardTitle>Error</CardTitle>
-                            <CardDescription>Could not load creator dashboard data.</CardDescription>
-                        </div>
-                    </CardHeader>
-                </Card>
-            </div>
-        )
-    }
-
-    // 3. Calculate dashboard metrics
-    const totalRevenue = purchases.reduce((acc, purchase) => acc + purchase.price, 0);
-    const totalStudents = new Set(purchases.map(p => p.userId)).size;
-    const activeCourses = creatorCourses.filter(c => c.status === 'published').length;
-
-    // 4. Process data for sales chart
-    const salesData = purchases.reduce((acc, purchase) => {
-        const month = format(new Date(purchase.purchaseDate), 'MMM');
-        const existing = acc.find(d => d.name === month);
-        if (existing) {
-            existing.sales += purchase.price;
-        } else {
-            acc.push({ name: month, sales: purchase.price });
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const auth = getAuth();
+        const current = auth.currentUser;
+        if (!current) {
+          setLoading(false);
+          return;
         }
-        return acc;
-    }, [] as { name: string; sales: number }[]);
-
-    // Ensure we have data for the last 6 months, even if sales were 0
-    const last6Months = [...Array(6)].map((_, i) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        return format(d, 'MMM');
-    }).reverse();
-
-    const finalSalesData = last6Months.map(monthName => {
-        const found = salesData.find(d => d.name === monthName);
-        return found || { name: monthName, sales: 0 };
-    });
+        const token = await current.getIdToken();
+        const res = await fetch('/api/creator/dashboard', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || `Failed to load dashboard (${res.status})`);
+        }
+        const payload: DashboardResponse = await res.json();
+        if (mounted) setData(payload);
+      } catch (e: any) {
+        toast({
+          title: 'Failed to load dashboard',
+          description: e?.message || 'Unexpected error',
+          variant: 'destructive',
+        });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [toast]);
 
   return (
     <div className="space-y-6">
-       <div>
+      <div>
         <h1 className="text-2xl font-bold tracking-tight">Creator Dashboard</h1>
-        <p className="text-muted-foreground">
-          Here's an overview of your creator activity.
-        </p>
+        <p className="text-muted-foreground">Here's an overview of your creator activity.</p>
       </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -106,10 +84,10 @@ function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              All-time earnings
-            </p>
+            <div className="text-2xl font-bold">
+              {loading ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data?.totalRevenue || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">Last 6 months aggregate</p>
           </CardContent>
         </Card>
         <Card>
@@ -118,10 +96,8 @@ function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">
-              Unique customers
-            </p>
+            <div className="text-2xl font-bold">{loading ? '—' : (data?.totalStudents ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">Unique purchasers</p>
           </CardContent>
         </Card>
         <Card>
@@ -130,85 +106,30 @@ function Dashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeCourses}</div>
-            <p className="text-xs text-muted-foreground">
-              Published courses
-            </p>
+            <div className="text-2xl font-bold">{loading ? '—' : (data?.activeCourses ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">Created by you</p>
           </CardContent>
         </Card>
       </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Sales Overview</CardTitle>
           <CardDescription>Your sales performance over the last 6 months.</CardDescription>
         </CardHeader>
         <CardContent>
-           {purchases.length > 0 ? (
-                <SalesChart data={finalSalesData} />
-            ) : (
-                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                    <p>No sales data to display yet.</p>
-                </div>
-            )}
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={(data?.salesByMonth || []).map((x) => ({ name: x.monthLabel, sales: x.sales }))}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="sales" fill="hsl(var(--primary))" />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
   );
-}
-
-export default function CreatorDashboardPage() {
-    const { isUserLoading } = useUser();
-
-    if (isUserLoading) {
-        return <CreatorDashboardSkeleton />;
-    }
-
-    return <Dashboard />;
-}
-
-
-function CreatorDashboardSkeleton() {
-    return (
-        <div className="space-y-6">
-            <div>
-                <Skeleton className="h-8 w-1/3" />
-                <Skeleton className="h-4 w-2/3 mt-2" />
-            </div>
-             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-5 w-24" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-32" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-5 w-24" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-32" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-5 w-24" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-32" />
-                    </CardContent>
-                </Card>
-             </div>
-             <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-1/4" />
-                    <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-[300px] w-full" />
-                </CardContent>
-             </Card>
-        </div>
-    )
 }

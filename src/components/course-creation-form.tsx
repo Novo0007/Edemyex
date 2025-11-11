@@ -1,7 +1,7 @@
 'use client';
 import { useFormState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { createCourseAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -12,14 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import AiOutlineGenerator from './ai-outline-generator';
 import { useUser } from '@/firebase';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? 'Creating Course...' : 'Create Course'}
+      {pending ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting for Review...</> : 'Submit for Review'}
     </Button>
   );
 }
@@ -28,11 +28,10 @@ export default function CourseCreationForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
-  const [isPending, startTransition] = useTransition();
 
   const initialState = { errors: {}, success: false, courseId: null };
-  // `dispatch` is not directly used, but it's the action passed to the form
-  const [state, dispatch] = useFormState(createCourseAction.bind(null, user?.uid || ''), initialState);
+  const createCourseActionWithUserId = createCourseAction.bind(null, user?.uid);
+  const [state, dispatch] = useFormState(createCourseActionWithUserId, initialState);
 
   const [description, setDescription] = useState('');
   const [outline, setOutline] = useState('');
@@ -41,31 +40,23 @@ export default function CourseCreationForm() {
     setOutline(newOutline);
   };
   
-  // Wrapper for the server action to use with startTransition
-  const handleFormAction = (formData: FormData) => {
-    if (!user) {
-        toast({ title: "Authentication Error", description: "You must be logged in to create a course.", variant: "destructive" });
-        return;
+  useEffect(() => {
+    if (state.success && state.courseId) {
+      toast({
+        title: 'Success!',
+        description: 'Your course has been submitted for review.',
+      });
+      router.push(`/creator/courses`);
     }
-    startTransition(() => {
-        createCourseAction(user.uid, formData).then(result => {
-             if (result.success && result.courseId) {
-                toast({
-                    title: 'Success!',
-                    description: 'Your course has been submitted for review.',
-                });
-                router.push(`/creator/courses`);
-            } else if (result.errors) {
-                const errorMessages = Object.values(result.errors).flat().join(', ');
-                toast({
-                    title: 'Error',
-                    description: errorMessages || 'Something went wrong.',
-                    variant: 'destructive',
-                });
-            }
-        });
-    });
-  };
+    const formError = state.errors?._form?.[0];
+    if (formError) {
+      toast({
+        title: 'Error Creating Course',
+        description: formError,
+        variant: 'destructive',
+      });
+    }
+  }, [state, router, toast]);
 
 
   if (isUserLoading) {
@@ -125,7 +116,7 @@ export default function CourseCreationForm() {
         <CardDescription>Fill in the details for your new course.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleFormAction} className="space-y-6">
+        <form action={dispatch} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Course Title</Label>
             <Input id="title" name="title" placeholder="e.g., Introduction to Web Development" required />
@@ -197,11 +188,10 @@ export default function CourseCreationForm() {
             <Input id="price" name="price" type="number" step="0.01" placeholder="e.g., 3999.00" required />
             {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price[0]}</p>}
           </div>
+          
+          <SubmitButton />
 
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? 'Submitting for Review...' : 'Submit for Review'}
-          </Button>
-          {state.errors?._form && <div className="text-sm font-medium text-destructive">{state.errors._form[0]}</div>}
+          {state.errors?._form && <p className="text-sm font-medium text-destructive">{state.errors._form[0]}</p>}
         </form>
       </CardContent>
     </Card>

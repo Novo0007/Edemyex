@@ -50,7 +50,18 @@ const CourseSchema = z.object({
   imageHint: z.string().optional(),
 });
 
-export async function createCourseAction(creatorId: string, formData: FormData) {
+export async function createCourseAction(
+  creatorId: string | undefined, 
+  prevState: { errors: any; success: boolean; courseId: string | null },
+  formData: FormData
+) {
+  if (!creatorId) {
+    return {
+      ...prevState,
+      errors: { _form: ['You must be logged in as a creator to create a course.'] },
+    };
+  }
+
   const validatedFields = CourseSchema.safeParse({
     title: formData.get('title'),
     description: formData.get('description'),
@@ -64,6 +75,7 @@ export async function createCourseAction(creatorId: string, formData: FormData) 
 
   if (!validatedFields.success) {
     return {
+      ...prevState,
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -72,13 +84,13 @@ export async function createCourseAction(creatorId: string, formData: FormData) 
     const createdCourse = await newCourse(validatedFields.data, creatorId);
     revalidatePath('/creator/courses');
     revalidatePath('/');
-    return { success: true, courseId: createdCourse.id };
+    return { ...prevState, success: true, courseId: createdCourse.id, errors: {} };
   } catch (error) {
     let message = 'Something went wrong.';
     if (error instanceof Error) {
         message = error.message;
     }
-    return { errors: { _form: [message] } };
+    return { ...prevState, errors: { _form: [message] } };
   }
 }
 

@@ -1,140 +1,61 @@
-/**
- * @file Firestore Security Rules for Edemy.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for private data (profiles, purchases, recommendations)
- * and a creator-ownership model for public course data. It implements Role-Based Access Control (RBAC)
- * to grant special permissions to 'creator' and 'admin' roles, with admins having universal management privileges.
- * The rules are designed for security, performance, and clarity.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profiles, roles, and creator status.
- * - /courses/{courseId}: Stores course information, owned by a creator.
- * - /purchases/{purchaseId}: Stores all purchase records for analytics.
- * - /users/{userId}/recommendations/{recommendationId}: Private subcollection for a user's AI recommendations.
- *
- * Key Security Decisions:
- * - Default to deny: Access is only granted if a rule explicitly allows it.
- * - User data is private: Users can only read and write their own documents in the `/users` collection.
- * - Creator content is protected: Only the user who created a course (or an admin) can update or delete it.
- * - Public data is read-only for most users: Anyone can browse courses, but write access is restricted.
- * - Admins have god-mode: The 'admin' role bypasses most ownership checks for management purposes.
- * - Purchases are write-only for users (via backend) and readable by creators and admins.
- *
- * Denormalization for Authorization:
- * To avoid slow and costly `get()` calls within rules, authorization data is denormalized.
- * - The `role` ('user', 'creator', 'admin') is stored directly on the user's document.
- * - The `creatorId` is stored directly on the course document and purchase document.
- */
+// firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Secures the user profile collection.
-     * @path /users/{userId}
-     * @allow (get, update, delete) A user can only access their own profile. Admins can access any profile.
-     * @allow (list) Only admins can list all users. This prevents users from scraping all user data.
-     * @allow (create) An authenticated user can create their own profile document. We enforce that the document ID matches their user ID.
-     * @principle Enforces document ownership for user profiles, with a specific override for admins.
-     */
+    // Users: owner-only access; admins can manage; only admins can list all users
     match /users/{userId} {
       allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-
-      // Deprecated, purchases are now in a root collection. Rules kept for safety.
-      match /purchases/{purchaseId} {
-        allow read, write: if false; 
-      }
-
-      /**
-       * @description Secures the user-specific recommendations subcollection.
-       * @path /users/{userId}/recommendations/{recommendationId}
-       * @allow (read, write) A user can manage their own AI-generated recommendations. No other user can access them.
-       * @principle Enforces strict ownership over sensitive subcollections. The rule inherits the `userId` from the path.
-       */
-      match /recommendations/{recommendationId} {
-        allow read, write: if isSignedIn() && isOwner(userId);
-      }
     }
 
-    /**
-     * @description Secures the public course collection.
-     * @path /courses/{courseId}
-     * @allow (get, list) Anyone, including unauthenticated users, can view and list courses to browse the platform.
-     * @allow (create) An authenticated user can create a course, but we enforce that the `creatorId` in the new document matches their own UID.
-     * @allow (update, delete) Only the original course creator or an admin can modify or delete the course.
-     * @principle Allows public reads for discoverability but enforces strict ownership or admin privileges for all writes.
-     */
+    // Courses: public read; creator or admin can write
     match /courses/{courseId} {
       allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
       allow update, delete: if isSignedIn() && (isCourseOwner(resource.data.creatorId) || isAdmin());
     }
 
-    /**
-     * @description Secures the top-level purchases collection, used for analytics and revenue tracking.
-     * @path /purchases/{purchaseId}
-     * @allow (create) Only our backend can create purchase documents. (This rule assumes backend calls are authenticated with admin privileges or a specific service account mechanism not directly verifiable here, so we lock it down). For the purpose of this app, we'll allow any signed-in user to create their own purchase record via the server actions.
-     * @allow (read) The user who made the purchase, the creator of the purchased course, or an admin can read the purchase document.
-     * @allow (list) This rule now allows for collection group queries. Creators can list their own sales, and admins can list all sales.
-     * @allow (update, delete) No one can update or delete purchase records from the client.
-     * @principle Enables creators to see their sales data without exposing all purchase data publicly.
-     */
-    match /purchases/{purchaseId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId) || isAdmin());
-      // This is not directly used for list, but for collectionGroup queries.
-      // The `where` clause in the query is what enforces the security.
-      allow list: if isSignedIn() && (isCreator() || isAdmin());
-      allow update, delete: if false;
+    // Purchases: private under each user
+    match /users/{userId}/purchases/{purchaseId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
 
+    // Recommendations: private under each user (if used)
+    match /users/{userId}/recommendations/{recommendationId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
 
-    // --- Helper Functions ---
+    match /users/{userId} {
+  // Allow reads of approved creator profiles; owner and admin can read as well
+  allow read: if
+    (resource.data.creatorStatus == 'approved') ||
+    (isSignedIn() && (isOwner(userId) || isAdmin()));
 
-    /**
-     * @description Checks if a user is authenticated.
-     * @returns {bool} True if a user is signed in, false otherwise.
-     */
+  // Only admins can list all users (optional: keep this if you still want to block full scans)
+  // Note: If you keep this 'list' line as admin-only, queries by non-admins will still work
+  // because the broader 'read' condition above permits the documents they return.
+  allow list: if isSignedIn() && isAdmin();
+
+  // Writes restricted
+  allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+  allow update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
+}
+
+    // Helpers
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /**
-     * @description Checks if the currently authenticated user is the owner of the document.
-     * @param userId The ID of the user document to check against.
-     * @returns {bool} True if the requester's UID matches the provided userId.
-     */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-
-    /**
-     * @description Checks if the currently authenticated user is the owner of a course.
-     * @param creatorId The ID of the course creator to check against.
-     * @returns {bool} True if the requester's UID matches the provided creatorId.
-     */
     function isCourseOwner(creatorId) {
-        return request.auth.uid == creatorId;
+      return request.auth.uid == creatorId;
     }
-    
-    /**
-     * @description Checks if the currently authenticated user has the 'admin' role.
-     * This function performs a document read to check the user's role.
-     * @returns {bool} True if the user is signed in and their role in Firestore is 'admin'.
-     */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-     /**
-     * @description Checks if the currently authenticated user has the 'creator' role.
-     * @returns {bool} True if the user is signed in and their role in Firestore is 'creator'.
-     */
-    function isCreator() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'creator';
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
