@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { grantCourseAccess, newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
-import { razorpay } from '@/lib/razorpay';
+import { getRazorpayInstance } from '@/lib/razorpay';
 import { Course } from '@/lib/types';
 
 
@@ -44,8 +44,6 @@ const CourseSchema = z.object({
   outline: z.string().min(20, "Outline must be at least 20 characters"),
   videoUrl: z.string().url("Must be a valid video URL"),
   imageUrl: z.string().url("Must be a valid image URL"),
-  creator: z.string().min(1, "Creator name is required"),
-  creatorAvatar: z.string().url("Creator avatar is required"),
 });
 
 export async function createCourseAction(
@@ -69,8 +67,6 @@ export async function createCourseAction(
     outline: formData.get('outline'),
     videoUrl: formData.get('videoUrl'),
     imageUrl: formData.get('imageUrl'),
-    creator: formData.get('creator'),
-    creatorAvatar: formData.get('creatorAvatar'),
   });
 
   if (!validatedFields.success) {
@@ -83,8 +79,14 @@ export async function createCourseAction(
 
   try {
     const courseData = validatedFields.data;
+    
+    const user = { 
+        name: formData.get('creator') as string, 
+        profileImageUrl: formData.get('creatorAvatar') as string
+    };
 
-    const createdCourse = await newCourse(courseData, creatorId);
+    const createdCourse = await newCourse(courseData, user, creatorId);
+
     revalidatePath('/creator/courses');
     revalidatePath('/');
     return { success: true, courseId: createdCourse.id, errors: {} };
@@ -126,6 +128,7 @@ export async function createRazorpayOrder(course: Course, userId: string) {
     };
 
     try {
+        const razorpay = getRazorpayInstance();
         const order = await razorpay.orders.create(options);
         return { success: true, order };
     } catch (error) {
