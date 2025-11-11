@@ -2,28 +2,11 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { grantCourseAccess, newCourse, getCourseById as getCourseByIdData } from '@/lib/data';
-import { getAdminUser } from '@/firebase/admin';
+import { getCreatorFromToken } from '@/app/api/creator/dashboard/route';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';
 import type { Course } from '@/lib/types';
-
-
-// This is a protected action, we need to get the user from the session
-async function getUserIdFromSession(): Promise<string | null> {
-    const authorization = headers().get('Authorization');
-    if (authorization?.startsWith('Bearer ')) {
-        const idToken = authorization.split('Bearer ')[1];
-        try {
-            const adminUser = await getAdminUser(idToken);
-            return adminUser.uid;
-        } catch (error) {
-            console.error("Error verifying token:", error);
-            return null;
-        }
-    }
-    return null;
-}
 
 export async function getCourseById(id: string) {
     return getCourseByIdData(id);
@@ -53,15 +36,14 @@ export async function createCourseAction(
   prevState: { errors: any; success: boolean; courseId: string | null },
   formData: FormData
 ) {
-
-    const creatorId = await getUserIdFromSession();
-  if (!creatorId) {
-    return {
-      errors: { _form: ['You must be logged in as a creator to create a course.'] },
-      success: false,
-      courseId: null,
-    };
-  }
+    const creator = await getCreatorFromToken(headers());
+    if (!creator) {
+      return {
+        errors: { _form: ['You must be logged in as a creator to create a course.'] },
+        success: false,
+        courseId: null,
+      };
+    }
 
   const validatedFields = CourseSchema.safeParse({
     title: formData.get('title'),
@@ -84,7 +66,7 @@ export async function createCourseAction(
   try {
     const courseData = validatedFields.data;
     
-    const createdCourse = await newCourse(courseData, creatorId);
+    const createdCourse = await newCourse(courseData, creator.id);
 
     revalidatePath('/creator/courses');
     revalidatePath('/');

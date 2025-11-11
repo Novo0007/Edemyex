@@ -4,10 +4,11 @@ import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { subMonths, format, startOfMonth } from 'date-fns';
 import type { Purchase } from '@/lib/types';
+import { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
 // Helper to get user and check role
-async function getCreatorFromToken(req: NextRequest) {
-    const authorization = req.headers.get('authorization');
+export async function getCreatorFromToken(headers: ReadonlyHeaders) {
+    const authorization = headers.get('authorization');
     if (!authorization?.startsWith('Bearer ')) {
         return null;
     }
@@ -33,7 +34,7 @@ async function getCreatorFromToken(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-    const creator = await getCreatorFromToken(req);
+    const creator = await getCreatorFromToken(req.headers);
 
     if (!creator) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
