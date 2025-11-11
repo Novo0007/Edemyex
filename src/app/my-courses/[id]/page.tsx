@@ -16,7 +16,9 @@ async function getUser(): Promise<(User & { uid: string }) | null> {
             const decodedToken = await auth.verifyIdToken(idToken);
             const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
             if (userDoc.exists) {
-                return { uid: decodedToken.uid, ...(userDoc.data() as User) };
+                const userData = userDoc.data() as User;
+                // Important: Combine uid from token with spread data from doc
+                return { uid: decodedToken.uid, ...userData, id: decodedToken.uid };
             }
         } catch (error) {
             console.error("Error verifying token or fetching user:", error);

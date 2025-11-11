@@ -4,7 +4,7 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User as FirebaseAuthUser } from 'firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getIdToken } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 // Define the shape of the user data stored in Firestore.
@@ -236,3 +236,32 @@ export const useUser = (): UserHookResult => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };
+
+/**
+ * Hook to get the current user's ID token.
+ * @returns {string | null} The ID token, or null if not logged in or loading.
+ */
+export const useIdToken = (): string | null => {
+    const { auth } = useFirebase();
+    const [idToken, setIdToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (auth?.currentUser) {
+            getIdToken(auth.currentUser).then(setIdToken);
+        } else {
+            setIdToken(null);
+        }
+
+        const unsubscribe = onAuthStateChanged(auth!, (user) => {
+            if (user) {
+                getIdToken(user).then(setIdToken);
+            } else {
+                setIdToken(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth]);
+
+    return idToken;
+}
