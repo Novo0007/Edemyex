@@ -2,7 +2,8 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { grantCourseAccess, newCourse, getAdminUser, getCourseById as getCourseByIdData } from '@/lib/data';
+import { grantCourseAccess, newCourse, getCourseById as getCourseByIdData } from '@/lib/data';
+import { getAdminUser } from '@/firebase/admin';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';

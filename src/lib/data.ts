@@ -5,7 +5,7 @@ import type { Course, User } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
 // This is a server-side data fetching file.
-const { firestore, auth } = getFirebaseAdmin();
+const { firestore } = getFirebaseAdmin();
 
 const coursesCollection = firestore.collection('courses');
 const usersCollection = firestore.collection('users');
@@ -26,8 +26,12 @@ const validateAndGetImage = (course: any) => {
 
     if (course.imageUrl) {
         try {
+            // Data URIs are allowed
+            if (course.imageUrl.startsWith('data:image')) {
+                 return { imageUrl: course.imageUrl };
+            }
             const url = new URL(course.imageUrl);
-            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname) || course.imageUrl.startsWith('data:image')) {
+            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname)) {
                 return {
                     imageUrl: course.imageUrl,
                 };
@@ -100,17 +104,6 @@ export async function getUserById(userId: string): Promise<User | undefined> {
   }
 }
 
-export async function getAdminUser(uid: string): Promise<any> {
-    try {
-        const userRecord = await auth.getUser(uid);
-        return userRecord;
-    } catch (error) {
-        console.error('Error fetching user data:', error);
-        return null;
-    }
-}
-
-
 export async function getPurchasedCourses(userId: string): Promise<Course[]> {
     const user = await getUserById(userId);
     if (!user || !user.purchasedCourseIds || user.purchasedCourseIds.length === 0) {
@@ -166,7 +159,7 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
 
         // Add course to user's purchased list for quick access checks
         const updatedPurchased = [ ...(userData.purchasedCourseIds ?? []), courseId ];
-        await userRef.set({ purchasedCourseIds: updatedPurchased }, { merge: true });
+        await userRef.update({ purchasedCourseIds: updatedPurchased });
 
         return true;
     } catch (error) {

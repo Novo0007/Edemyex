@@ -1,4 +1,4 @@
-// lib/firebaseAdmin.ts
+
 import { initializeApp, getApps, App, cert, ServiceAccount } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
@@ -24,4 +24,16 @@ export function getFirebaseAdmin() {
     auth: getAuth(app),
     firestore: getFirestore(app),
   };
+}
+
+export async function getAdminUser(idToken: string): Promise<any> {
+    const { auth } = getFirebaseAdmin();
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const userRecord = await auth.getUser(decodedToken.uid);
+        return userRecord;
+    } catch (error) {
+        console.error('Error verifying token or fetching user data:', error);
+        return null;
+    }
 }
