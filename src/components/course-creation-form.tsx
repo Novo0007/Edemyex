@@ -1,5 +1,5 @@
 'use client';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { createCourseAction } from '@/app/actions';
@@ -36,7 +36,7 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
   const { user } = useUser();
 
   const initialState = { errors: {}, success: false, courseId: null };
-  const [state, dispatch] = useFormState(createCourseAction, initialState);
+  const [state, dispatch] = useActionState(createCourseAction, initialState);
   
   useEffect(() => {
     if (state.success && state.courseId) {
