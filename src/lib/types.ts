@@ -1,3 +1,4 @@
+
 export interface Course {
   id: string;
   title: string;
@@ -34,6 +35,6 @@ export interface Purchase {
   userId: string;
   courseId: string;
   creatorId: string;
-  purchaseDate: string; // ISO date string
+  purchaseDate: object; // Stored as Firestore Timestamp
   price: number;
 }

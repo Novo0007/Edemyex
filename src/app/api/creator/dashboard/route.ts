@@ -1,8 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '@/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { subMonths, format, startOfMonth } from 'date-fns';
+import type { Purchase } from '@/lib/types';
 
 // Helper to get user and check role
 async function getCreatorFromToken(req: NextRequest) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
             .where('creatorId', '==', creator.id)
             .get();
 
-        const purchases = purchasesSnapshot.docs.map(doc => doc.data());
+        const purchases = purchasesSnapshot.docs.map(doc => doc.data() as Purchase);
         
         // --- 2. Calculate total revenue and unique students ---
         let totalRevenue = 0;
@@ -82,14 +83,16 @@ export async function GET(req: NextRequest) {
 
         const recentPurchasesSnapshot = await firestore.collection('purchases')
             .where('creatorId', '==', creator.id)
-            .where('purchaseDate', '>=', sixMonthsAgo.toISOString())
+            .where('purchaseDate', '>=', sixMonthsAgo) // Query using Date object
             .get();
 
         recentPurchasesSnapshot.docs.forEach(doc => {
-            const purchase = doc.data();
-            if (purchase.purchaseDate) {
-                 // The purchaseDate is an ISO string, so `new Date()` will parse it correctly.
-                const monthKey = format(new Date(purchase.purchaseDate), 'yyyy-MM');
+            const purchase = doc.data() as Purchase;
+            const purchaseTimestamp = purchase.purchaseDate as unknown as Timestamp;
+
+            if (purchaseTimestamp) {
+                const purchaseDate = purchaseTimestamp.toDate();
+                const monthKey = format(purchaseDate, 'yyyy-MM');
                 if (salesByMonth.hasOwnProperty(monthKey)) {
                     salesByMonth[monthKey] += purchase.price || 0;
                 }

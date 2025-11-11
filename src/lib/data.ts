@@ -1,7 +1,7 @@
 
 import { getFirebaseAdmin } from '@/firebase/admin';
-
-import type { Course, User } from './types';
+import { FieldValue } from 'firebase-admin/firestore';
+import type { Course, User, Purchase } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
 // This is a server-side data fetching file.
@@ -77,6 +77,14 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
     if (docSnap.exists) {
       const courseData = docSnap.data() as any;
       const { imageUrl } = validateAndGetImage(courseData);
+      
+      // Convert Timestamp to ISO string if it exists
+      if (courseData.videos) {
+          courseData.videos = courseData.videos.map((v: any) => ({
+              ...v,
+          }));
+      }
+
       return { 
           ...courseData, 
           id: docSnap.id,
@@ -154,7 +162,7 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
             userId: userId,
             creatorId: creatorId,
             price: price,
-            purchaseDate: new Date().toISOString(), // Store as ISO 8601 string
+            purchaseDate: FieldValue.serverTimestamp(), // Use Firestore server timestamp
         });
 
         // Add course to user's purchased list for quick access checks
