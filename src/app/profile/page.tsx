@@ -1,6 +1,8 @@
+
 'use client';
 
-import { useEffect, useActionState } from 'react';
+import { useEffect } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfileAction } from '@/app/actions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -78,9 +80,17 @@ export default function ProfilePage() {
             <div>
               <CardTitle className="text-2xl">{user.name}</CardTitle>
               <CardDescription>{user.email}</CardDescription>
-               <Badge className="mt-2 capitalize" variant={user.role === 'admin' ? 'default' : user.role === 'creator' ? 'secondary' : 'outline'}>
-                  {user.role}
-                </Badge>
+               <div className="mt-2 flex items-center gap-2">
+                 <Badge className="capitalize" variant={user.role === 'admin' ? 'default' : user.role === 'creator' ? 'secondary' : 'outline'}>
+                    {user.role}
+                  </Badge>
+                  {user.creatorStatus === 'approved' && (
+                    <Badge variant="outline" className="flex items-center gap-1 border-green-600 text-green-600">
+                        <CheckCircle className="h-3 w-3" />
+                        Verified Creator
+                    </Badge>
+                  )}
+               </div>
             </div>
           </div>
         </CardHeader>
