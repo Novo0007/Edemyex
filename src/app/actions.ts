@@ -14,7 +14,6 @@ export async function getCourseById(id: string) {
 }
 
 export async function purchaseCourse(userId: string, courseId: string, creatorId: string, price: number) {
-  // In a real app, you'd get the userId from the session, not as an argument
   const result = await grantCourseAccess(userId, courseId, creatorId, price);
   if (result) {
     revalidatePath('/my-courses');
@@ -169,6 +168,7 @@ export async function updateProfileAction(
     });
     
     revalidatePath('/profile');
+    revalidatePath('/my-courses');
     return {
       errors: {},
       success: true,

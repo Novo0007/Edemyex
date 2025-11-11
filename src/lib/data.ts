@@ -1,10 +1,8 @@
-
 import { getFirebaseAdmin } from '@/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Course, User, Purchase } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
-// This is a server-side data fetching file.
 const { firestore } = getFirebaseAdmin();
 
 const coursesCollection = firestore.collection('courses');
@@ -14,19 +12,16 @@ const ALLOWED_IMAGE_HOSTS = [
   'images.unsplash.com',
   'picsum.photos',
   'storage.googleapis.com',
-  // Vercel avatars are also used and can be considered safe
   'avatar.vercel.sh',
 ];
 
 const validateAndGetImage = (course: any) => {
-    // Default placeholder in case of any issues
     const placeholder = {
         imageUrl: 'https://picsum.photos/seed/error/600/400',
     };
 
     if (course.imageUrl) {
         try {
-            // Data URIs are allowed
             if (course.imageUrl.startsWith('data:image')) {
                  return { imageUrl: course.imageUrl };
             }
@@ -36,12 +31,9 @@ const validateAndGetImage = (course: any) => {
                     imageUrl: course.imageUrl,
                 };
             }
-        } catch (e) {
-            // Invalid URL format, fall through to placeholder
-        }
+        } catch (e) {}
     }
     
-    // If no valid imageUrl, try to find a placeholder by category
     const categoryName = (course.category || 'default').toLowerCase();
     const categoryImage = PlaceHolderImages.find(img => img.id.includes(categoryName));
     
@@ -57,10 +49,14 @@ export async function getCourses(): Promise<Course[]> {
     for (const d of snapshot.docs) {
       const courseData = d.data() as any;
       const { imageUrl } = validateAndGetImage(courseData);
+      const creator = await getUserById(courseData.creatorId);
+
       result.push({ 
           ...courseData, 
           id: d.id,
           imageUrl,
+          creator: creator?.name || 'Unknown Creator',
+          creatorAvatar: creator?.profileImageUrl || '',
       } as Course);
     }
     return result;
@@ -77,18 +73,14 @@ export async function getCourseById(id: string): Promise<Course | undefined> {
     if (docSnap.exists) {
       const courseData = docSnap.data() as any;
       const { imageUrl } = validateAndGetImage(courseData);
+      const creator = await getUserById(courseData.creatorId);
       
-      // Convert Timestamp to ISO string if it exists
-      if (courseData.videos) {
-          courseData.videos = courseData.videos.map((v: any) => ({
-              ...v,
-          }));
-      }
-
       return { 
           ...courseData, 
           id: docSnap.id,
           imageUrl,
+          creator: creator?.name || 'Unknown Creator',
+          creatorAvatar: creator?.profileImageUrl || '',
       } as Course;
     }
     return undefined;
@@ -103,7 +95,7 @@ export async function getUserById(userId: string): Promise<User | undefined> {
     const docRef = usersCollection.doc(userId);
     const docSnap = await docRef.get();
     if (docSnap.exists) {
-      return docSnap.data() as User;
+      return { id: docSnap.id, ...docSnap.data() } as User;
     }
     return undefined;
   } catch (error) {
@@ -119,8 +111,9 @@ export async function getPurchasedCourses(userId: string): Promise<Course[]> {
     }
 
     try {
-        // Firestore 'in' queries are limited to 30 values in the array
         const courseIds = user.purchasedCourseIds.slice(0, 30);
+        if(courseIds.length === 0) return [];
+        
         const snapshot = await coursesCollection.where('id', 'in', courseIds).get();
         const result: Course[] = [];
         for (const d of snapshot.docs) {
@@ -148,13 +141,11 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
         if (!userSnap.exists) return false;
         const userData = userSnap.data() as User;
         
-        // Prevent re-processing
         if (userData.purchasedCourseIds?.includes(courseId)) {
             console.log(`User ${userId} already owns course ${courseId}.`);
-            return true; // Idempotent, so return success
+            return true;
         }
 
-        // Create purchase record in a top-level `purchases` collection for easier querying
         const purchaseRef = firestore.collection(`purchases`).doc();
         await purchaseRef.set({
             id: purchaseRef.id,
@@ -162,12 +153,12 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
             userId: userId,
             creatorId: creatorId,
             price: price,
-            purchaseDate: FieldValue.serverTimestamp(), // Use Firestore server timestamp
+            purchaseDate: FieldValue.serverTimestamp(),
         });
 
-        // Add course to user's purchased list for quick access checks
-        const updatedPurchased = [ ...(userData.purchasedCourseIds ?? []), courseId ];
-        await userRef.update({ purchasedCourseIds: updatedPurchased });
+        await userRef.update({ 
+            purchasedCourseIds: FieldValue.arrayUnion(courseId) 
+        });
 
         return true;
     } catch (error) {
@@ -185,29 +176,28 @@ export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 's
         throw new Error('Creator not found');
     }
 
-    const newCourseData: Omit<Course, 'id'> = {
+    const newCourseData: Course = {
+        id: docRef.id,
         creatorId: creatorId,
         creator: creator.name,
         creatorAvatar: creator.profileImageUrl,
         status: 'pending',
-        ...courseData,
+        title: courseData.title,
+        description: courseData.description,
+        price: courseData.price,
+        category: courseData.category,
+        outline: courseData.outline,
+        videoUrl: courseData.videoUrl,
+        imageUrl: courseData.imageUrl,
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
 
-    const courseWithId: Course = {
-      ...newCourseData,
-      id: docRef.id,
-    }
-
-    await docRef.set(courseWithId);
-    return courseWithId;
+    await docRef.set(newCourseData);
+    return newCourseData;
 }
 
 
 export async function getRecommendedCourses(): Promise<Course[]> {
-  // This is a mock implementation of AI recommendations.
-  // In a real app, this would involve a call to an AI service.
   const all = await getCourses();
-  // return first 3 for now
   return all.slice(0, 3);
 }

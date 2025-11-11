@@ -2,7 +2,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, getDocs, where } from 'firebase/firestore';
 import type { Purchase, User, Course } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -14,7 +14,6 @@ type EnrichedPurchase = Purchase & {
     courseTitle?: string;
 };
 
-// Custom hook to enrich purchase data with user and course details
 function useEnrichedPurchases(purchases: Purchase[] | null) {
     const firestore = useFirestore();
     const [enrichedData, setEnrichedData] = useState<EnrichedPurchase[]>([]);
@@ -24,9 +23,15 @@ function useEnrichedPurchases(purchases: Purchase[] | null) {
         if (!purchases || !firestore) {
             setIsLoading(false);
             return;
-        };
+        }
 
         const enrich = async () => {
+            if (purchases.length === 0) {
+                setEnrichedData([]);
+                setIsLoading(false);
+                return;
+            }
+
             setIsLoading(true);
             const userIds = [...new Set(purchases.map(p => p.userId))];
             const courseIds = [...new Set(purchases.map(p => p.courseId))];
@@ -34,26 +39,42 @@ function useEnrichedPurchases(purchases: Purchase[] | null) {
             const users: Record<string, User> = {};
             const courses: Record<string, Course> = {};
 
-            // In a real app with many users/courses, this should be paginated or handled server-side
-            // For this example, we fetch them in batches.
-            if (userIds.length > 0) {
-                 const userDocs = await firestore.collection('users').where('id', 'in', userIds.slice(0, 10)).get();
-                 userDocs.forEach(doc => users[doc.id] = doc.data() as User);
-            }
-             if (courseIds.length > 0) {
-                 const courseDocs = await firestore.collection('courses').where('id', 'in', courseIds.slice(0, 10)).get();
-                 courseDocs.forEach(doc => courses[doc.id] = doc.data() as Course);
+            const userPromises = [];
+            for (let i = 0; i < userIds.length; i += 30) {
+                const chunk = userIds.slice(i, i + 30);
+                userPromises.push(getDocs(query(collection(firestore, 'users'), where('id', 'in', chunk))));
             }
 
-            const data = purchases.map(p => ({
-                ...p,
-                userName: users[p.userId]?.name || 'N/A',
-                userEmail: users[p.userId]?.email || 'N/A',
-                courseTitle: courses[p.courseId]?.title || 'N/A',
-            }));
+            const coursePromises = [];
+            for (let i = 0; i < courseIds.length; i += 30) {
+                const chunk = courseIds.slice(i, i + 30);
+                coursePromises.push(getDocs(query(collection(firestore, 'courses'), where('id', 'in', chunk))));
+            }
+            
+            try {
+                const userSnapshots = await Promise.all(userPromises);
+                userSnapshots.forEach(snapshot => {
+                    snapshot.forEach(doc => users[doc.id] = doc.data() as User);
+                });
 
-            setEnrichedData(data);
-            setIsLoading(false);
+                const courseSnapshots = await Promise.all(coursePromises);
+                courseSnapshots.forEach(snapshot => {
+                    snapshot.forEach(doc => courses[doc.id] = doc.data() as Course);
+                });
+                
+                const data = purchases.map(p => ({
+                    ...p,
+                    userName: users[p.userId]?.name || 'N/A',
+                    userEmail: users[p.userId]?.email || 'N/A',
+                    courseTitle: courses[p.courseId]?.title || 'N/A',
+                }));
+
+                setEnrichedData(data);
+            } catch (error) {
+                console.error("Error enriching purchase data:", error);
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         enrich();

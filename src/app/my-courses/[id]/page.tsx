@@ -37,8 +37,17 @@ export default async function MyCourseViewerPage({ params }: { params: { id: str
   const course = await getCourseById(id);
   const user = await getUser();
 
-  // Security check: ensure user has purchased this course or is an admin
-  if (!course || !user || (!user.purchasedCourseIds?.includes(course.id) && user.role !== 'admin')) {
+  if (!course) {
+      notFound();
+  }
+
+  // Security check: allow access if user has purchased, is the creator, or is an admin
+  const hasAccess = user && 
+    (user.purchasedCourseIds?.includes(course.id) || 
+     user.id === course.creatorId || 
+     user.role === 'admin');
+
+  if (!hasAccess) {
     notFound();
   }
 
