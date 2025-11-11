@@ -2,17 +2,18 @@
 import { useEffect, useState } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Clock, Clapperboard, Star } from 'lucide-react';
-import type { Course } from '@/lib/types';
+import { Clock, Clapperboard, Star, Heart } from 'lucide-react';
+import type { Course, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { purchaseCourse, getCourseById } from '@/app/actions';
+import { purchaseCourse, getCourseById, getUserById } from '@/app/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CourseDetailPage({ params }: { params: { id: string } }) {
   const [course, setCourse] = useState<Course | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -22,8 +23,12 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     if (!id) return;
     async function fetchCourse() {
       const courseData = await getCourseById(id);
+      const userData = await getUserById('user-1');
       if (courseData) {
         setCourse(courseData);
+      }
+      if (userData) {
+        setUser(userData);
       }
       setIsLoading(false);
     }
@@ -47,6 +52,26 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
       });
     }
   };
+
+  const handleFavoriteCreator = () => {
+    if (!course || !user) return;
+    // This is a mock implementation. In a real app, this would be a server action.
+    const isFavorited = user.favoriteCreatorIds.includes(course.creatorAvatar);
+    if(isFavorited) {
+        toast({
+            title: 'Already a Favorite!',
+            description: `${course.creator} is already in your favorites.`,
+        });
+    } else {
+        // Mocking the update
+        const updatedUser = { ...user, favoriteCreatorIds: [...user.favoriteCreatorIds, course.creatorAvatar] };
+        setUser(updatedUser);
+        toast({
+            title: 'Creator Favorited!',
+            description: `You've added ${course.creator} to your favorites.`,
+        });
+    }
+  }
 
   if (isLoading) {
     return <CourseDetailSkeleton />;
@@ -72,14 +97,20 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
             </div>
             <span>12,345 students</span>
           </div>
-          <div className="mb-6 flex items-center gap-2">
-            <Avatar>
-              <AvatarImage src={course.creatorAvatar} alt={course.creator} />
-              <AvatarFallback>{course.creator.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <p>
-              Created by <span className="font-semibold text-primary">{course.creator}</span>
-            </p>
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Avatar>
+                <AvatarImage src={course.creatorAvatar} alt={course.creator} />
+                <AvatarFallback>{course.creator.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <p>
+                Created by <span className="font-semibold text-primary">{course.creator}</span>
+                </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleFavoriteCreator}>
+                <Heart className="mr-2 size-4" />
+                Favorite Creator
+            </Button>
           </div>
           <Separator />
           <div className="mt-6">

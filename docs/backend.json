@@ -92,6 +92,13 @@
             "type": "string"
           }
         },
+        "favoriteCreatorIds": {
+            "type": "array",
+            "description": "References to creators the user has favorited.",
+            "items": {
+                "type": "string"
+            }
+        },
         "role": {
             "type": "string",
             "description": "The role of the user (e.g., user, creator, admin).",

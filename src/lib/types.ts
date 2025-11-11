@@ -21,4 +21,5 @@ export interface User {
   avatarUrl: string;
   purchasedCourses: string[];
   browsingHistory: string[];
+  favoriteCreatorIds: string[];
 }
