@@ -17,7 +17,7 @@ export default function CreatorCoursesPage() {
     const firestore = useFirestore();
 
     const creatorCoursesQuery = useMemoFirebase(() => {
-        if (!user) return null;
+        if (!firestore || !user) return null;
         return query(collection(firestore, 'courses'), where('creatorId', '==', user.uid));
     }, [firestore, user]);
 

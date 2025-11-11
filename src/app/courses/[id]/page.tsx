@@ -12,6 +12,7 @@ import { purchaseCourse, getCourseById } from '@/app/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 export default function CourseDetailPage({ params }: { params: { id: string } }) {
   const [course, setCourse] = useState<Course | null>(null);

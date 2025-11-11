@@ -41,11 +41,15 @@ export default function RegisterPage() {
       await updateProfile(user, { displayName: name });
       
       const userDocRef = doc(firestore, 'users', user.uid);
+      
+      // Assign admin role if the email matches
+      const finalRole = email === 'mynameisjyotirmoy@gmail.com' ? 'admin' : role;
+
       setDocumentNonBlocking(userDocRef, {
         id: user.uid,
         name: name,
         email: user.email,
-        role: role,
+        role: finalRole,
         purchasedCourseIds: [],
         favoriteCreatorIds: [],
         profileImageUrl: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,

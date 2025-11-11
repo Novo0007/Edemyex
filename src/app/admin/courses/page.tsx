@@ -14,7 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 export default function AdminCoursesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const coursesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'courses');
+  }, [firestore]);
   const { data: courses, isLoading } = useCollection<Course>(coursesQuery);
 
   const handleStatusChange = async (courseId: string, status: 'published' | 'rejected') => {

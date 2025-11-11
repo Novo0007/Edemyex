@@ -13,7 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminUsersPage() {
     const firestore = useFirestore();
-    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const usersQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'users');
+    }, [firestore]);
     const { data: users, isLoading } = useCollection<User>(usersQuery);
 
     if (isLoading) {
