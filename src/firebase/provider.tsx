@@ -43,6 +43,7 @@ export interface FirebaseServicesAndUser {
   user: (FirebaseAuthUser & User) | null;
   isUserLoading: boolean;
   userError: Error | null;
+  areServicesAvailable: boolean;
 }
 
 // Return type for useUser() - specific to user auth state
@@ -144,7 +145,8 @@ export const useFirebase = (): FirebaseServicesAndUser => {
         auth: null,
         user: null,
         isUserLoading: true,
-        userError: new Error('useFirebase must be used within a FirebaseProvider.')
+        userError: new Error('useFirebase must be used within a FirebaseProvider.'),
+        areServicesAvailable: false,
     }
   }
 
@@ -155,19 +157,20 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    areServicesAvailable: context.areServicesAvailable,
   };
 };
 
 /** Hook to access Firebase Auth instance. Returns null if not available. */
 export const useAuth = (): Auth | null => {
-  const { auth } = useFirebase();
-  return auth;
+  const { auth, areServicesAvailable } = useFirebase();
+  return areServicesAvailable ? auth : null;
 };
 
 /** Hook to access Firestore instance. Returns null if not available. */
 export const useFirestore = (): Firestore | null => {
-  const { firestore } = useFirebase();
-  return firestore;
+  const { firestore, areServicesAvailable } = useFirebase();
+  return areServicesAvailable ? firestore : null;
 };
 
 /** Hook to access Firebase App instance. Returns null if not available. */
@@ -179,6 +182,7 @@ export const useFirebaseApp = (): FirebaseApp | null => {
 export function useMemoFirebase<T>(factory: () => T | null, deps: DependencyList): T | null {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoized = useMemo(() => {
+    // Check if any dependency is explicitly null or undefined. If so, don't run the factory.
     if (deps.some(dep => dep === null || typeof dep === 'undefined')) {
         return null;
     }

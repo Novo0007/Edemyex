@@ -15,7 +15,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const auth = useAuth();
   const router = useRouter();
@@ -24,11 +23,10 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) {
-        setError("Authentication service is not available.");
+        toast({ title: "Authentication service is not available.", variant: 'destructive'});
         return;
     }
     setIsLoading(true);
-    setError(null);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -53,8 +51,9 @@ export default function LoginPage() {
             errorMessage = 'Failed to log in. Please try again.';
         }
       }
-      setError(errorMessage);
-      setIsLoading(false);
+      toast({ title: 'Login Failed', description: errorMessage, variant: 'destructive'});
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -89,9 +88,6 @@ export default function LoginPage() {
                 required
               />
             </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
             <Button type="submit" className="w-full" disabled={isLoading || !auth}>
               {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
             </Button>

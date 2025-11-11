@@ -129,7 +129,7 @@ export default function CourseCreationForm() {
           <div className="space-y-2">
             <Label htmlFor="title">Course Title</Label>
             <Input id="title" name="title" placeholder="e.g., Introduction to Web Development" required />
-            {state.errors?.title && <p className="text-sm text-destructive">{state.errors.title}</p>}
+            {state.errors?.title && <p className="text-sm text-destructive">{state.errors.title[0]}</p>}
           </div>
 
           <div className="space-y-2">
@@ -146,7 +146,7 @@ export default function CourseCreationForm() {
                 <SelectItem value="Business">Business</SelectItem>
               </SelectContent>
             </Select>
-            {state.errors?.category && <p className="text-sm text-destructive">{state.errors.category}</p>}
+            {state.errors?.category && <p className="text-sm text-destructive">{state.errors.category[0]}</p>}
           </div>
           
            <div className="space-y-2">
@@ -160,19 +160,19 @@ export default function CourseCreationForm() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description}</p>}
+            {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description[0]}</p>}
           </div>
 
            <div className="space-y-2">
             <Label htmlFor="imageUrl">Thumbnail URL</Label>
             <Input id="imageUrl" name="imageUrl" placeholder="https://your-image.com/thumbnail.png" required />
-            {state.errors?.imageUrl && <p className="text-sm text-destructive">{state.errors.imageUrl}</p>}
+            {state.errors?.imageUrl && <p className="text-sm text-destructive">{state.errors.imageUrl[0]}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="videoUrl">Main Video URL (e.g., YouTube embed)</Label>
             <Input id="videoUrl" name="videoUrl" placeholder="https://www.youtube.com/embed/your-video-id" required />
-            {state.errors?.videoUrl && <p className="text-sm text-destructive">{state.errors.videoUrl}</p>}
+            {state.errors?.videoUrl && <p className="text-sm text-destructive">{state.errors.videoUrl[0]}</p>}
           </div>
 
           <AiOutlineGenerator description={description} onOutlineChange={handleOutlineChange} />
@@ -189,18 +189,19 @@ export default function CourseCreationForm() {
               onChange={(e) => setOutline(e.target.value)}
               className="bg-background font-mono text-sm"
             />
-             {state.errors?.outline && <p className="text-sm text-destructive">{state.errors.outline}</p>}
+             {state.errors?.outline && <p className="text-sm text-destructive">{state.errors.outline[0]}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="price">Price (INR)</Label>
             <Input id="price" name="price" type="number" step="0.01" placeholder="e.g., 3999.00" required />
-            {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price}</p>}
+            {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price[0]}</p>}
           </div>
 
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending ? 'Submitting for Review...' : 'Submit for Review'}
           </Button>
+          {state.errors?._form && <div className="text-sm font-medium text-destructive">{state.errors._form[0]}</div>}
         </form>
       </CardContent>
     </Card>

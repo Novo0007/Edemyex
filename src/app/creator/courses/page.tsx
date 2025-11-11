@@ -13,7 +13,7 @@ import type { Course } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CreatorCoursesPage() {
-    const { user, isUserLoading } = useUser();
+    const { user } = useUser();
     const firestore = useFirestore();
 
     const creatorCoursesQuery = useMemoFirebase(() => {
@@ -23,7 +23,7 @@ export default function CreatorCoursesPage() {
 
     const { data: creatorCourses, isLoading } = useCollection<Course>(creatorCoursesQuery);
 
-    if (isUserLoading || (isLoading && !creatorCourses)) {
+    if (isLoading) {
         return <CreatorCoursesSkeleton />;
     }
 
@@ -93,7 +93,7 @@ export default function CreatorCoursesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-               {!creatorCourses || creatorCourses.length === 0 && (
+               {(!creatorCourses || creatorCourses.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={6} className="text-center h-24">
                         You haven't created any courses yet.

@@ -21,7 +21,7 @@ export default function AdminUsersPage() {
     
     const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-    if (isLoading && !users) {
+    if (isLoading) {
         return <AdminUsersSkeleton />
     }
 

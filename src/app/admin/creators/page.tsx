@@ -31,11 +31,9 @@ export default function AdminCreatorsPage() {
         if (!firestore) return;
         const userRef = doc(firestore, 'users', userId);
         try {
-            const updates: { creatorStatus: string; role?: 'creator' | 'user' } = { creatorStatus: newStatus };
+            const updates: { creatorStatus: string; role?: 'creator' } = { creatorStatus: newStatus };
             if (newStatus === 'approved') {
                 updates.role = 'creator';
-            } else {
-                updates.role = 'user';
             }
             await updateDoc(userRef, updates);
             toast({
@@ -73,7 +71,7 @@ export default function AdminCreatorsPage() {
                         <CardContent>
                            <CreatorTable
                                 users={pendingCreators}
-                                isLoading={isLoadingPending && !pendingCreators}
+                                isLoading={isLoadingPending}
                                 onApprove={(id) => handleVerification(id, 'approved')}
                                 onReject={(id) => handleVerification(id, 'rejected')}
                                 isPending
@@ -90,7 +88,7 @@ export default function AdminCreatorsPage() {
                         <CardContent>
                             <CreatorTable
                                 users={approvedCreators}
-                                isLoading={isLoadingApproved && !approvedCreators}
+                                isLoading={isLoadingApproved}
                            />
                         </CardContent>
                     </Card>

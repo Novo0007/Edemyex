@@ -15,7 +15,8 @@ function FavoriteCreators() {
 
     const favoriteCreatorsQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.favoriteCreatorIds || user.favoriteCreatorIds.length === 0) return null;
-        return query(collection(firestore, 'users'), where('id', 'in', user.favoriteCreatorIds));
+        // Firestore 'in' queries are limited to 10 items. For more, you'd need multiple queries.
+        return query(collection(firestore, 'users'), where('id', 'in', user.favoriteCreatorIds.slice(0, 10)));
     }, [firestore, user]);
 
     const { data: favoriteCreators, isLoading } = useCollection<User>(favoriteCreatorsQuery);
@@ -62,7 +63,8 @@ function MyCourses() {
 
     const purchasedCoursesQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.purchasedCourseIds || user.purchasedCourseIds.length === 0) return null;
-        return query(collection(firestore, 'courses'), where('id', 'in', user.purchasedCourseIds));
+        // Firestore 'in' queries are limited to 10 items. For more, you'd need multiple queries.
+        return query(collection(firestore, 'courses'), where('id', 'in', user.purchasedCourseIds.slice(0, 10)));
     }, [firestore, user]);
 
     const { data: purchasedCourses, isLoading } = useCollection<Course>(purchasedCoursesQuery);

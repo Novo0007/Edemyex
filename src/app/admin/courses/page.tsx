@@ -40,7 +40,7 @@ export default function AdminCoursesPage() {
     }
   }
 
-  if(isLoading && !courses) {
+  if(isLoading) {
     return <AdminCoursesSkeleton />;
   }
 
@@ -62,7 +62,7 @@ export default function AdminCoursesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Creator</TableHead>
+                <TableHead>Creator ID</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead><span className="sr-only">Actions</span></TableHead>
@@ -72,7 +72,7 @@ export default function AdminCoursesPage() {
               {courses?.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
-                  <TableCell>{course.creator}</TableCell>
+                  <TableCell>{course.creatorId}</TableCell>
                   <TableCell>{course.category}</TableCell>
                   <TableCell>
                     <Badge 
