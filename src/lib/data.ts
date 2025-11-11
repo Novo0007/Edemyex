@@ -1,4 +1,3 @@
-
 import { getFirebaseAdmin } from '@/firebase/admin';
 
 import type { Course, User } from './types';
@@ -177,8 +176,7 @@ export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 's
         throw new Error('Creator not found');
     }
 
-    const newCourse: Course = {
-        id: docRef.id,
+    const newCourseData: Omit<Course, 'id'> = {
         creatorId: creatorId,
         creator: creator.name,
         creatorAvatar: creator.profileImageUrl,
@@ -187,8 +185,13 @@ export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 's
         videos: [{ title: courseData.title, url: courseData.videoUrl, duration: 0 }],
     };
 
-    await docRef.set(newCourse);
-    return newCourse;
+    const courseWithId: Course = {
+      ...newCourseData,
+      id: docRef.id,
+    }
+
+    await docRef.set(courseWithId);
+    return courseWithId;
 }
 
 

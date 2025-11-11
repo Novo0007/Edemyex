@@ -1,4 +1,3 @@
-
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -7,7 +6,7 @@ import { getAdminUser } from '@/firebase/admin';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';
-import { Course } from '@/lib/types';
+import type { Course } from '@/lib/types';
 
 
 // This is a protected action, we need to get the user from the session

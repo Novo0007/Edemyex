@@ -6,7 +6,22 @@ import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User as FirebaseAuthUser } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
-import { User } from '@/lib/types';
+
+// Define the shape of the user data stored in Firestore.
+// This is kept separate from lib/types.ts to avoid client->server dependency.
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  profileImageUrl: string;
+  purchasedCourseIds: string[];
+  favoriteCreatorIds: string[];
+  role: 'user' | 'creator' | 'admin';
+  creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
+}
+
+// The user object available in the context will be a combination of Firebase Auth's user and our app's user data.
+export type CombinedUser = FirebaseAuthUser & AppUser;
 
 
 interface FirebaseProviderProps {
@@ -18,7 +33,7 @@ interface FirebaseProviderProps {
 
 // Internal state for user authentication
 interface UserAuthState {
-  user: (FirebaseAuthUser & User) | null;
+  user: CombinedUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -30,7 +45,7 @@ export interface FirebaseContextState {
   firestore: Firestore | null;
   auth: Auth | null; // The Auth service instance
   // User authentication state
-  user: (FirebaseAuthUser & User) | null;
+  user: CombinedUser | null;
   isUserLoading: boolean; // True during initial auth check
   userError: Error | null; // Error from auth listener
 }
@@ -40,7 +55,7 @@ export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  user: (FirebaseAuthUser & User) | null;
+  user: CombinedUser | null;
   isUserLoading: boolean;
   userError: Error | null;
   areServicesAvailable: boolean;
@@ -48,7 +63,7 @@ export interface FirebaseServicesAndUser {
 
 // Return type for useUser() - specific to user auth state
 export interface UserHookResult { 
-  user: (FirebaseAuthUser & User) | null;
+  user: CombinedUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -82,7 +97,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
             const unsubDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const userData = docSnap.data() as User;
+                    const userData = docSnap.data() as AppUser;
                     setUserAuthState({
                         user: { ...firebaseUser, ...userData }, // Combine auth user and firestore user data
                         isUserLoading: false,
@@ -91,7 +106,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 } else {
                      // User doc doesn't exist yet, might be in the process of creation
                      // We'll provide the basic auth user for now.
-                     setUserAuthState({ user: { ...firebaseUser, role: 'user', creatorStatus: 'none', purchasedCourseIds: [], favoriteCreatorIds: [], profileImageUrl: '', name: firebaseUser.displayName || '', email: firebaseUser.email || '' } as (FirebaseAuthUser & User), isUserLoading: false, userError: null });
+                     const defaultAppUser: AppUser = { 
+                        id: firebaseUser.uid,
+                        role: 'user', 
+                        creatorStatus: 'none', 
+                        purchasedCourseIds: [], 
+                        favoriteCreatorIds: [], 
+                        profileImageUrl: firebaseUser.photoURL || '', 
+                        name: firebaseUser.displayName || '', 
+                        email: firebaseUser.email || '' 
+                     };
+                     setUserAuthState({ user: { ...firebaseUser, ...defaultAppUser }, isUserLoading: false, userError: null });
                 }
             }, (error) => {
                 console.error("FirebaseProvider: User doc snapshot error:", error);

@@ -15,7 +15,7 @@ export default function CourseViewerClient({ course }: { course: Course }) {
     notFound();
   }
   
-  if (!isUserLoading && (!user || !user.purchasedCourseIds?.includes(course.id))) {
+  if (!isUserLoading && user && !user.purchasedCourseIds?.includes(course.id) && user.role !== 'admin') {
       notFound();
   }
 
