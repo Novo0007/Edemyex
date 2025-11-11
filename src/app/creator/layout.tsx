@@ -77,6 +77,7 @@ export default function CreatorLayout({
   return (
     <SidebarProvider>
       <Sidebar>
+        <SheetTitle className="sr-only">Creator Navigation</SheetTitle>
         <SidebarHeader>
           <div className="flex h-14 items-center gap-2 px-2">
             <Logo className="size-6 text-primary" />
