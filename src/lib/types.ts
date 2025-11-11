@@ -28,6 +28,16 @@ export interface User {
   favoriteCreatorIds: string[];
   role: 'user' | 'creator' | 'admin';
   creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  payoutDetails?: {
+    name: string;
+    email: string;
+    phone: string;
+    upiId?: string;
+    bank?: {
+      accountNumber: string;
+      ifsc: string;
+    };
+  };
 }
 
 export interface Purchase {

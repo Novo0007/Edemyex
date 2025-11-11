@@ -18,6 +18,16 @@ export interface AppUser {
   favoriteCreatorIds: string[];
   role: 'user' | 'creator' | 'admin';
   creatorStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  payoutDetails?: {
+    name: string;
+    email: string;
+    phone: string;
+    upiId?: string;
+    bank?: {
+      accountNumber: string;
+      ifsc: string;
+    };
+  };
 }
 
 // The user object available in the context will be a combination of Firebase Auth's user and our app's user data.

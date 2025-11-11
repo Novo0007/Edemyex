@@ -108,6 +108,23 @@
             "type": "string",
             "description": "The verification status of a creator application.",
             "enum": ["none", "pending", "approved", "rejected"]
+        },
+        "payoutDetails": {
+          "type": "object",
+          "description": "Creator's payout information.",
+          "properties": {
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "phone": { "type": "string" },
+            "upiId": { "type": "string" },
+            "bank": {
+              "type": "object",
+              "properties": {
+                "accountNumber": { "type": "string" },
+                "ifsc": { "type": "string" }
+              }
+            }
+          }
         }
       },
       "required": [
