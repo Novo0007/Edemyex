@@ -84,7 +84,6 @@ export default function CreatorLayout({
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
-          <SheetTitle className="sr-only">Creator Navigation</SheetTitle>
           <SidebarMenu>
             {creatorNavItems.map(item => (
               <SidebarMenuItem key={item.label}>

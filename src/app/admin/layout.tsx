@@ -82,7 +82,6 @@ export default function AdminLayout({
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
           <SidebarMenu>
             {adminNavItems.map(item => (
               <SidebarMenuItem key={item.label}>
