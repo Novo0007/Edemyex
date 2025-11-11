@@ -170,16 +170,20 @@ export const useFirebaseApp = (): FirebaseApp | null => {
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) | null {
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | null {
   const memoized = useMemo(() => {
-    const hasNullDep = deps.some(dep => dep === null || dep === undefined);
-    if (hasNullDep) return null;
+    // If any dependency is null or undefined, do not execute the factory.
+    // This is the critical guard against race conditions.
+    if (deps.some(dep => dep === null || typeof dep === 'undefined')) {
+        return null;
+    }
     return factory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
-  (memoized as MemoFirebase<T>).__memo = true;
+  if(memoized && typeof memoized === 'object') {
+    (memoized as MemoFirebase<T>).__memo = true;
+  }
   
   return memoized;
 }
