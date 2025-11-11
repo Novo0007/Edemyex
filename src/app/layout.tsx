@@ -7,8 +7,8 @@ import Footer from '@/components/layout/footer';
 import { FirebaseClientProvider }from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'CourseCraft Academy',
-  description: 'Discover, learn, and create with CourseCraft Academy. Your marketplace for online video courses.',
+  title: 'Edemy',
+  description: 'Discover, learn, and create with Edemy. Your marketplace for online video courses.',
 };
 
 export default function RootLayout({

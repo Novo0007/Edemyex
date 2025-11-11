@@ -1,5 +1,5 @@
 /**
- * @file Firestore Security Rules for CourseCraft Academy.
+ * @file Firestore Security Rules for Edemy.
  *
  * Core Philosophy:
  * This ruleset enforces a user-ownership model for user profiles, purchases, and recommendations.
