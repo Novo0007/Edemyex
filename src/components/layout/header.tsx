@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { BookOpen, Library, Menu, PlusCircle, Search } from 'lucide-react';
+import { BookOpen, Library, Menu, PlusCircle, Search, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -120,6 +120,9 @@ export default function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a Course</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Log out</DropdownMenuItem>
