@@ -1,3 +1,4 @@
+
 import { getFirebaseAdmin } from '@/firebase/admin';
 
 import type { Course, User } from './types';
