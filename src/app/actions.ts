@@ -2,11 +2,12 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { grantCourseAccess, newCourse, getCourseById as getCourseByIdData } from '@/lib/data';
-import { getCreatorFromToken } from '@/app/api/creator/dashboard/route';
+import { getCreatorFromToken, getUserFromToken } from '@/app/api/creator/dashboard/route';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';
 import type { Course } from '@/lib/types';
+import { getFirebaseAdmin } from '@/firebase/admin';
 
 export async function getCourseById(id: string) {
     return getCourseByIdData(id);
@@ -116,4 +117,69 @@ export async function createRazorpayOrder(course: Course, userId: string) {
         console.error("Razorpay order creation failed:", error);
         return { success: false, error: "Could not create payment order." };
     }
+}
+
+const ProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  profileImageUrl: z.string().url("Must be a valid URL.").or(z.literal('')),
+});
+
+
+export async function updateProfileAction(
+  prevState: { errors: any; success: boolean; message: string },
+  formData: FormData
+) {
+  const user = await getUserFromToken(headers());
+  if (!user) {
+    return {
+      errors: {},
+      success: false,
+      message: 'You must be logged in to update your profile.',
+    };
+  }
+
+  const validatedFields = ProfileSchema.safeParse({
+    name: formData.get('name'),
+    profileImageUrl: formData.get('profileImageUrl'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+      message: 'Invalid data provided.',
+    };
+  }
+
+  const { name, profileImageUrl } = validatedFields.data;
+  const { auth, firestore } = getFirebaseAdmin();
+
+  try {
+    // Update Firebase Auth profile
+    await auth.updateUser(user.id, {
+      displayName: name,
+      photoURL: profileImageUrl,
+    });
+
+    // Update Firestore document
+    const userRef = firestore.collection('users').doc(user.id);
+    await userRef.update({
+      name: name,
+      profileImageUrl: profileImageUrl,
+    });
+    
+    revalidatePath('/profile');
+    return {
+      errors: {},
+      success: true,
+      message: 'Your profile has been updated successfully.',
+    };
+  } catch (error) {
+     console.error("Error updating profile:", error);
+     return {
+      errors: {},
+      success: false,
+      message: 'An unexpected error occurred. Please try again.',
+    };
+  }
 }

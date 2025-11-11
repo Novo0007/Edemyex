@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { subMonths, format, startOfMonth } from 'date-fns';
-import type { Purchase } from '@/lib/types';
+import type { Purchase, User } from '@/lib/types';
 import { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
 // Helper to get user and check role
-export async function getCreatorFromToken(headers: ReadonlyHeaders) {
+export async function getUserFromToken(headers: ReadonlyHeaders): Promise<(User & {id: string}) | null> {
     const authorization = headers.get('authorization');
     if (!authorization?.startsWith('Bearer ')) {
         return null;
@@ -21,16 +21,20 @@ export async function getCreatorFromToken(headers: ReadonlyHeaders) {
 
         if (!userDoc.exists) return null;
         
-        const user = userDoc.data();
-        // Only allow creators or admins to access this
-        if (user?.role === 'creator' || user?.role === 'admin') {
-            return { id: decodedToken.uid, ...user };
-        }
-        return null;
+        const user = userDoc.data() as User;
+        return { id: decodedToken.uid, ...user };
     } catch (error) {
         console.error("Error verifying token:", error);
         return null;
     }
+}
+
+export async function getCreatorFromToken(headers: ReadonlyHeaders) {
+    const user = await getUserFromToken(headers);
+    if (user && (user.role === 'creator' || user.role === 'admin')) {
+        return user;
+    }
+    return null;
 }
 
 export async function GET(req: NextRequest) {
