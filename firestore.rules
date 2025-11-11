@@ -4,6 +4,7 @@
  * Core Philosophy:
  * This ruleset enforces a user-ownership model for user profiles, purchases, and recommendations.
  * Course ownership is based on the `creatorId` field within the course document.
+ * Admins have elevated privileges to manage users and courses.
  *
  * Data Structure:
  * - /users/{userId}: Stores user profiles.
@@ -13,110 +14,67 @@
  *
  * Key Security Decisions:
  * - Users can only access their own profile data, purchases, and recommendations.
- * - Courses can be read by anyone, but only the creator can update or delete them.
+ * - Admins can read and write all user and course data for management purposes.
+ * - Courses can be read by anyone, but only the creator or an admin can update or delete them.
  * - Listing of user-specific purchases and recommendations is restricted to the owning user.
  * - The rules prioritize security and simplicity, avoiding complex queries and external data lookups.
  *
  * Denormalization for Authorization:
- * - Course documents include a `creatorId` field to directly associate courses with their creators. This avoids the need for `get()` calls to the `/users/{userId}` collection when enforcing course ownership.
+ * - Course documents include a `creatorId` field to directly associate courses with their creators.
+ * - User documents include a `role` field ('user', 'creator', 'admin') to manage permissions.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows access to user profile data based on user ID.
+     * @description Allows access to user profile data based on user ID or admin role.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' can create their profile.
-     *   request.auth.uid == 'user123' && request.resource.data.id == 'user123'
-     * @allow (get) User with ID 'user123' can read their profile.
-     *   request.auth.uid == 'user123'
-     * @allow (update) User with ID 'user123' can update their profile.
-     *   request.auth.uid == 'user123'
-     * @allow (delete) User with ID 'user123' can delete their profile.
-     *   request.auth.uid == 'user123'
-     * @deny (create) User with ID 'user456' attempts to create a profile for 'user123'.
-     *   request.auth.uid == 'user456' && request.resource.data.id == 'user123'
-     * @deny (get) User with ID 'user456' attempts to read the profile of 'user123'.
-     *   request.auth.uid == 'user456'
-     * @principle Enforces document ownership for user profiles.
+     * @allow (create) A user can create their own profile.
+     * @allow (get, update, delete) A user can access their own profile.
+     * @allow (list, get, update) An admin can access any user's profile.
+     * @principle Enforces document ownership for user profiles, with admin override.
      */
     match /users/{userId} {
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == request.resource.data.id;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin());
     }
 
     /**
-     * @description Allows public read access to course data, but restricts creation, updates, and deletions to the course creator.
+     * @description Allows public read access to course data. Creation, updates, and deletions are restricted to the course creator or an admin.
      * @path /courses/{courseId}
-     * @allow (get) Any user can read course data.
-     *   true
-     * @allow (create) User with ID 'user123' can create a course with creatorId 'user123'.
-     *   request.auth.uid == 'user123' && request.resource.data.creatorId == 'user123'
-     * @allow (update) User with ID 'user123' can update a course they created (creatorId is 'user123').
-     *   request.auth.uid == 'user123' && resource.data.creatorId == 'user123'
-     * @allow (delete) User with ID 'user123' can delete a course they created (creatorId is 'user123').
-     *   request.auth.uid == 'user123' && resource.data.creatorId == 'user123'
-     * @deny (create) User with ID 'user456' attempts to create a course with creatorId 'user123'.
-     *   request.auth.uid == 'user456' && request.resource.data.creatorId == 'user123'
-     * @deny (update) User with ID 'user456' attempts to update a course created by 'user123'.
-     *   request.auth.uid == 'user456' && resource.data.creatorId == 'user123'
-     * @principle Allows public reads but enforces document ownership for writes.
+     * @allow (get, list) Any user can read course data.
+     * @allow (create) An authenticated user can create a course.
+     * @allow (update, delete) The course owner or an admin can update/delete the course.
+     * @principle Allows public reads but enforces ownership or admin privileges for writes.
      */
     match /courses/{courseId} {
       allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
-      allow update: if isSignedIn() && isCourseOwner(resource.data.creatorId) && resource != null;
-      allow delete: if isSignedIn() && isCourseOwner(resource.data.creatorId) && resource != null;
+      allow update, delete: if isSignedIn() && (isCourseOwner(resource.data.creatorId) || isAdmin());
     }
 
     /**
      * @description Allows access to purchase records for a specific user.
      * @path /users/{userId}/purchases/{purchaseId}
-     * @allow (create) User with ID 'user123' can create a purchase record under their ID.
-     *   request.auth.uid == 'user123'
-     * @allow (get) User with ID 'user123' can read their purchase record.
-     *   request.auth.uid == 'user123'
-     * @allow (update) User with ID 'user123' can update their purchase record.
-     *   request.auth.uid == 'user123'
-     * @allow (delete) User with ID 'user123' can delete their purchase record.
-     *   request.auth.uid == 'user123'
-     * @deny (create) User with ID 'user456' attempts to create a purchase record under user 'user123''s ID.
-     *   request.auth.uid == 'user456'
-     * @deny (get) User with ID 'user456' attempts to read a purchase record of user 'user123'.
-     *   request.auth.uid == 'user456'
+     * @allow (get, list, create, update, delete) A user can manage their own purchase records.
      * @principle Restricts access to a user's own purchase records.
      */
     match /users/{userId}/purchases/{purchaseId} {
-      allow get, list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId) && resource != null;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
 
     /**
      * @description Allows access to AI-generated course recommendations for a specific user.
      * @path /users/{userId}/recommendations/{recommendationId}
-     * @allow (create) User with ID 'user123' can have recommendations created for them.
-     *   request.auth.uid == 'user123'
-     * @allow (get) User with ID 'user123' can read their recommendations.
-     *   request.auth.uid == 'user123'
-     * @allow (update) User with ID 'user123' can update their recommendations.
-     *   request.auth.uid == 'user123'
-     * @allow (delete) User with ID 'user123' can delete their recommendations.
-     *   request.auth.uid == 'user123'
-     * @deny (get) User with ID 'user456' attempts to read recommendations for user 'user123'.
-     *   request.auth.uid == 'user456'
+     * @allow (get, list, create, update, delete) A user can manage their own recommendations.
      * @principle Restricts access to a user's own AI-generated course recommendations.
      */
     match /users/{userId}/recommendations/{recommendationId} {
-      allow get, list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId) && resource != null;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
 
     // Helper functions
@@ -128,14 +86,12 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-        return isSignedIn() && isOwner(userId) && resource != null;
-    }
-
     function isCourseOwner(creatorId) {
         return request.auth.uid == creatorId;
     }
+    
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }
-
-    
