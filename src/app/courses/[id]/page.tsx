@@ -16,17 +16,19 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const { id } = params;
 
   useEffect(() => {
+    if (!id) return;
     async function fetchCourse() {
-      const courseData = await getCourseById(params.id);
+      const courseData = await getCourseById(id as string);
       if (courseData) {
         setCourse(courseData);
       }
       setIsLoading(false);
     }
     fetchCourse();
-  }, [params.id]);
+  }, [id]);
 
   const handlePurchase = async () => {
     if (!course) return;

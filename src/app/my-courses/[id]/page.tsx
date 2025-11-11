@@ -12,10 +12,12 @@ export default function MyCourseViewerPage({ params }: { params: { id: string } 
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  const { id } = params;
 
   useEffect(() => {
+    if (!id) return;
     async function fetchData() {
-      const courseData = await getCourseById(params.id);
+      const courseData = await getCourseById(id as string);
       const userData = await getUserById('user-1');
 
       if (courseData) {
@@ -30,7 +32,7 @@ export default function MyCourseViewerPage({ params }: { params: { id: string } 
       setIsLoading(false);
     }
     fetchData();
-  }, [params.id]);
+  }, [id]);
 
   if (isLoading) {
     return <CourseViewerSkeleton />;
