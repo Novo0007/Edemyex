@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -40,6 +41,7 @@ import { useAuth, useUser } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { SheetTitle } from '@/components/ui/sheet';
 
 const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
@@ -73,6 +75,7 @@ export default function AdminLayout({
   return (
     <SidebarProvider>
       <Sidebar>
+        <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
         <SidebarHeader>
           <div className="flex h-14 items-center gap-2 px-2">
             <Logo className="size-6 text-primary" />
