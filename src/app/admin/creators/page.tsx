@@ -71,7 +71,7 @@ export default function AdminCreatorsPage() {
                         <CardContent>
                            <CreatorTable
                                 users={pendingCreators}
-                                isLoading={isLoadingPending}
+                                isLoading={isLoadingPending && !pendingCreators}
                                 onApprove={(id) => handleVerification(id, 'approved')}
                                 onReject={(id) => handleVerification(id, 'rejected')}
                                 isPending
@@ -88,7 +88,7 @@ export default function AdminCreatorsPage() {
                         <CardContent>
                             <CreatorTable
                                 users={approvedCreators}
-                                isLoading={isLoadingApproved}
+                                isLoading={isLoadingApproved && !approvedCreators}
                            />
                         </CardContent>
                     </Card>

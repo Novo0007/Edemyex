@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
     }, [firestore]);
     const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-    if (isLoading) {
+    if (isLoading && !users) {
         return <AdminUsersSkeleton />
     }
 

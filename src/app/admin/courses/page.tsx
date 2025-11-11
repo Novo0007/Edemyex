@@ -38,7 +38,7 @@ export default function AdminCoursesPage() {
     }
   }
 
-  if(isLoading) {
+  if(isLoading && !courses) {
     return <AdminCoursesSkeleton />;
   }
 

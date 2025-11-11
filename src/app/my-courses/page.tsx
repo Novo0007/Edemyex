@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser, useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import type { Course, User } from '@/lib/types';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function FavoriteCreators() {
@@ -16,7 +16,7 @@ function FavoriteCreators() {
     const favoriteCreatorsQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.favoriteCreatorIds || user.favoriteCreatorIds.length === 0) return null;
         return query(collection(firestore, 'users'), where('id', 'in', user.favoriteCreatorIds));
-    }, [firestore, user]);
+    }, [firestore, user?.favoriteCreatorIds]);
 
     const { data: favoriteCreators, isLoading } = useCollection<User>(favoriteCreatorsQuery);
 
@@ -63,7 +63,7 @@ function MyCourses() {
     const purchasedCoursesQuery = useMemoFirebase(() => {
         if (!firestore || !user || !user.purchasedCourseIds || user.purchasedCourseIds.length === 0) return null;
         return query(collection(firestore, 'courses'), where('id', 'in', user.purchasedCourseIds));
-    }, [firestore, user]);
+    }, [firestore, user?.purchasedCourseIds]);
 
     const { data: purchasedCourses, isLoading } = useCollection<Course>(purchasedCoursesQuery);
 

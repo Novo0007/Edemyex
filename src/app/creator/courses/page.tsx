@@ -23,7 +23,7 @@ export default function CreatorCoursesPage() {
 
     const { data: creatorCourses, isLoading } = useCollection<Course>(creatorCoursesQuery);
 
-    if (isUserLoading || isLoading) {
+    if (isUserLoading || (isLoading && !creatorCourses)) {
         return <CreatorCoursesSkeleton />;
     }
 
