@@ -1,19 +1,21 @@
 
 'use client';
 import Link from 'next/link';
-import { BookOpen, Library, Menu, PlusCircle, Search, User as UserIcon } from 'lucide-react';
+import { BookOpen, Library, LogOut, Menu, PlusCircle, Search, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/icons';
-import { getUserById } from '@/lib/data';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useEffect, useState } from 'react';
-import type { User } from '@/lib/types';
 import { useScroll } from '@/hooks/use-scroll';
 import { cn } from '@/lib/utils';
+import { useAuth, useUser } from '@/firebase/provider';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { signOut } from 'firebase/auth';
+import { Skeleton } from '../ui/skeleton';
 
 const navLinks = [
   { href: '/#courses', label: 'Browse' },
@@ -22,18 +24,28 @@ const navLinks = [
 ];
 
 export default function Header() {
-  const [user, setUser] = useState<User | null>(null);
   const { isScrolled, isScrollingUp } = useScroll();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    async function fetchUser() {
-      const userData = await getUserById('user-1');
-      if (userData) {
-        setUser(userData);
-      }
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/login');
+    } catch (error) {
+      toast({
+        title: 'Logout Failed',
+        description: 'There was an error logging you out.',
+        variant: 'destructive',
+      });
     }
-    fetchUser();
-  }, []);
+  };
 
   return (
     <header
@@ -72,7 +84,7 @@ export default function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="pr-0">
-            <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
+             <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <Logo className="h-6 w-6 text-primary" />
               <span className="font-bold font-headline">Edemy</span>
@@ -96,38 +108,55 @@ export default function Header() {
             </Button>
           </div>
           <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatarUrl} alt={user?.name} />
-                  <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+          
+          {isUserLoading ? (
+            <Skeleton className="h-8 w-8 rounded-full" />
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ''} />
+                    <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.displayName || 'User'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/my-courses"><Library className="mr-2 h-4 w-4"/>My Courses</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a Course</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                   <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" asChild>
+                <Link href="/login">Log In</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    Creator & Learner
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/my-courses"><Library className="mr-2 h-4 w-4"/>My Courses</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a Course</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/creator/dashboard"><UserIcon className="mr-2 h-4 w-4"/>Creator Dashboard</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button asChild>
+                <Link href="/register">Sign Up</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>

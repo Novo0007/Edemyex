@@ -19,9 +19,10 @@ import {
   PanelLeft,
   Settings,
   BadgeCheck,
+  LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Logo } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -34,8 +35,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser } from '@/firebase/provider';
+import { useAuth, useUser } from '@/firebase/provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
@@ -115,9 +118,37 @@ export default function AdminLayout({
 
 function UserMenu() {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/login');
+    } catch (error) {
+      toast({
+        title: 'Logout Failed',
+        description: 'There was an error logging you out.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (isUserLoading) {
     return <Skeleton className="h-8 w-8 rounded-full" />;
+  }
+
+  if (!user) {
+     return (
+      <Button asChild>
+        <Link href="/login">Login</Link>
+      </Button>
+    )
   }
 
   return (
@@ -127,7 +158,7 @@ function UserMenu() {
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
             <AvatarFallback>
-              {user?.displayName?.charAt(0) || 'A'}
+              {user?.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase() ||'A'}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -144,7 +175,10 @@ function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Log out</DropdownMenuItem>
+         <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

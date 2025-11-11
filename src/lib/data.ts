@@ -105,10 +105,12 @@ const allCourses: Course[] = [
 let mockUser: User = {
   id: 'user-1',
   name: 'Alex Johnson',
+  email: 'alex@example.com',
   avatarUrl: getImage('creator-avatar').imageUrl,
   purchasedCourses: ['2'], // User already owns 'React Masterclass'
   browsingHistory: ['1', '3'],
   favoriteCreatorIds: ['user-avatar-1', 'user-avatar-3'],
+  role: 'admin',
 };
 
 // Simulate a database

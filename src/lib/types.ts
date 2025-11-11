@@ -18,8 +18,10 @@ export interface Course {
 export interface User {
   id: string;
   name: string;
+  email: string;
   avatarUrl: string;
   purchasedCourses: string[];
   browsingHistory: string[];
   favoriteCreatorIds: string[];
+  role: 'user' | 'creator' | 'admin';
 }
