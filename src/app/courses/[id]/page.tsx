@@ -8,15 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { purchaseCourse, getCourseById } from '@/app/actions';
+import { getCourseById, createRazorpayOrder } from '@/app/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
 export default function CourseDetailPage({ params }: { params: { id: string } }) {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBuying, setIsBuying] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { id } = params;
@@ -43,20 +50,65 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
         router.push('/login');
         return;
     };
-    const success = await purchaseCourse(user.uid, course.id);
-    if (success) {
-      toast({
-        title: 'Purchase Successful!',
-        description: `You now have access to "${course.title}".`,
-      });
-      router.push('/my-courses');
-    } else {
-      toast({
-        title: 'Purchase Failed',
-        description: 'You may already own this course or an error occurred.',
-        variant: 'destructive',
-      });
+    
+    setIsBuying(true);
+
+    const orderResponse = await createRazorpayOrder(course, user.uid);
+
+    if (!orderResponse.success || !orderResponse.order) {
+        toast({
+            title: 'Purchase Failed',
+            description: orderResponse.error || 'Could not initiate payment.',
+            variant: 'destructive',
+        });
+        setIsBuying(false);
+        return;
     }
+
+    const { order } = orderResponse;
+
+    const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Edemy",
+        description: `Purchase: ${course.title}`,
+        image: "/logo.png", // You should host a logo
+        order_id: order.id,
+        handler: function (response: any) {
+            // This function is called after a successful payment
+            // The webhook will handle the course access grant
+            toast({
+                title: 'Payment Successful!',
+                description: 'We are processing your purchase. You will have access shortly.',
+            });
+            router.push('/my-courses');
+        },
+        prefill: {
+            name: user.displayName || user.name,
+            email: user.email,
+        },
+        notes: {
+            courseId: course.id,
+            userId: user.uid,
+        },
+        theme: {
+            color: "#3399cc"
+        }
+    };
+
+    const rzp = new window.Razorpay(options);
+    
+    rzp.on('payment.failed', function (response: any) {
+        toast({
+            title: 'Payment Failed',
+            description: response.error.description || 'Something went wrong.',
+            variant: 'destructive',
+        });
+        setIsBuying(false);
+    });
+
+    rzp.open();
   };
 
   const isFavorited = user?.favoriteCreatorIds?.includes(course?.creatorId || '');
@@ -163,8 +215,8 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                     <a href={`/my-courses/${course.id}`}>Go to Course</a>
                 </Button>
                ) : (
-                <Button size="lg" className="w-full" onClick={handlePurchase}>
-                    Buy now
+                <Button size="lg" className="w-full" onClick={handlePurchase} disabled={isBuying}>
+                    {isBuying ? 'Processing...' : 'Buy now'}
                 </Button>
                )}
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">

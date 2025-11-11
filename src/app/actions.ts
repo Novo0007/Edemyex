@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { getCourseById as getCourse, purchaseCourse as buyCourse, createCourse as newCourse, getAdminUser } from '@/lib/data';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
+import { razorpay } from '@/lib/razorpay';
+import { Course } from '@/lib/types';
 
 
 export async function getCourseById(id: string) {
@@ -91,4 +93,27 @@ export async function generateCourseOutline(courseTitle: string, courseDescripti
     console.error(e);
     return "There was an error generating the course outline."
   }
+}
+
+export async function createRazorpayOrder(course: Course, userId: string) {
+    const amountInPaise = Math.round(course.price * 100);
+
+    const options = {
+        amount: amountInPaise,
+        currency: "INR",
+        receipt: `receipt_course_${course.id}_${userId}`,
+        notes: {
+            courseId: course.id,
+            userId: userId,
+            courseTitle: course.title,
+        }
+    };
+
+    try {
+        const order = await razorpay.orders.create(options);
+        return { success: true, order };
+    } catch (error) {
+        console.error("Razorpay order creation failed:", error);
+        return { success: false, error: "Could not create payment order." };
+    }
 }
