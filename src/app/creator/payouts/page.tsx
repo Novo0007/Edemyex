@@ -3,11 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
-const mockPayouts = [
-    { id: 'pout-1', date: 'June 15, 2024', amount: '₹7,250.00', status: 'Completed' },
-    { id: 'pout-2', date: 'May 15, 2024', amount: '₹6,800.50', status: 'Completed' },
-    { id: 'pout-3', date: 'April 15, 2024', amount: '₹8,100.00', status: 'Completed' },
-];
+const mockPayouts: any[] = [];
 
 export default function CreatorPayoutsPage() {
   return (
@@ -36,7 +32,11 @@ export default function CreatorPayoutsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockPayouts.map((payout) => (
+                {mockPayouts.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center h-24">No payout history found.</TableCell>
+                    </TableRow>
+                ) : mockPayouts.map((payout) => (
                   <TableRow key={payout.id}>
                     <TableCell>{payout.date}</TableCell>
                     <TableCell>{payout.amount}</TableCell>
@@ -62,15 +62,15 @@ export default function CreatorPayoutsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Available for Payout</p>
-                <p className="text-3xl font-bold">₹8,123.45</p>
+                <p className="text-3xl font-bold">₹0.00</p>
             </div>
              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Payout Method</p>
-                <p className="font-medium">Bank Account ending in **** 1234</p>
+                <p className="font-medium">Bank Account not configured</p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">Request Payout</Button>
+            <Button className="w-full" disabled>Request Payout</Button>
           </CardFooter>
         </Card>
       </div>
