@@ -1,5 +1,6 @@
 'use client';
-import { useActionState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { createCourseAction } from '@/app/actions';
