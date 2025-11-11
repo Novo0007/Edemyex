@@ -146,12 +146,6 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
             {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description[0]}</p>}
           </div>
 
-           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Thumbnail URL</Label>
-            <Input id="imageUrl" name="imageUrl" placeholder="https://your-image.com/thumbnail.png" required />
-            {state.errors?.imageUrl && <p className="text-sm text-destructive">{state.errors.imageUrl[0]}</p>}
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="videoUrl">Main Video URL (e.g., YouTube embed)</Label>
             <Input id="videoUrl" name="videoUrl" placeholder="https://www.youtube.com/embed/your-video-id" required />

@@ -6,6 +6,7 @@ import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/razorpay';
 import { Course } from '@/lib/types';
+import { generateCourseImage } from '@/ai/ai-course-image-generation';
 
 
 export async function getCourseById(id: string) {
@@ -45,9 +46,7 @@ const CourseSchema = z.object({
   price: z.coerce.number().min(0, "Price must be a positive number"),
   category: z.string().min(1, "Category is required"),
   outline: z.string().min(20, "Outline must be at least 20 characters"),
-  imageUrl: z.string().url("Must be a valid image URL"),
   videoUrl: z.string().url("Must be a valid video URL"),
-  imageHint: z.string().optional(),
   creator: z.string().min(1, "Creator name is required"),
   creatorAvatar: z.string().url("Creator avatar is required"),
 });
@@ -71,9 +70,7 @@ export async function createCourseAction(
     price: formData.get('price'),
     category: formData.get('category'),
     outline: formData.get('outline'),
-    imageUrl: formData.get('imageUrl'),
     videoUrl: formData.get('videoUrl'),
-    imageHint: 'abstract', // default hint
     creator: formData.get('creator'),
     creatorAvatar: formData.get('creatorAvatar'),
   });
@@ -87,14 +84,24 @@ export async function createCourseAction(
   }
 
   try {
-    const createdCourse = await newCourse(validatedFields.data, creatorId);
+    const imageResult = await generateCourseImage({ courseTitle: validatedFields.data.title });
+    const imageUrl = imageResult.imageUrl;
+    const imageHint = imageResult.imageHint;
+
+    const courseData = {
+        ...validatedFields.data,
+        imageUrl: imageUrl,
+        imageHint: imageHint,
+    };
+
+    const createdCourse = await newCourse(courseData, creatorId);
     revalidatePath('/creator/courses');
-revalidatePath('/');
+    revalidatePath('/');
     return { success: true, courseId: createdCourse.id, errors: {} };
   } catch (error) {
-    let message = 'Something went wrong.';
+    let message = 'Something went wrong during course creation.';
     if (error instanceof Error) {
-        message = error.message;
+        message = `Course creation failed: ${error.message}`;
     }
     return { errors: { _form: [message] }, success: false, courseId: null };
   }
