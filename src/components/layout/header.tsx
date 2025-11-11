@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/icons';
 import { getUserById } from '@/lib/data';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const navLinks = [
   { href: '/#courses', label: 'Browse' },
@@ -18,8 +19,8 @@ export default async function Header() {
   const user = await getUserById('user-1');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center px-4">
+    <header className="fixed top-0 z-40 w-full p-4">
+      <div className="container mx-auto flex h-16 items-center rounded-full border bg-background/95 px-6 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Logo className="h-6 w-6 text-primary" />
@@ -71,6 +72,7 @@ export default async function Header() {
               Search courses...
             </Button>
           </div>
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
