@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import AiOutlineGenerator from '@/components/ai-outline-generator';
 import CourseCreationForm from '@/components/course-creation-form';
 import { useUser } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -14,8 +13,6 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CourseFormContainer() {
-  const [description, setDescription] = useState('');
-  const [outline, setOutline] = useState('');
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -69,16 +66,7 @@ export default function CourseFormContainer() {
               </div>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
-              <CourseCreationForm
-                  outline={outline}
-                  onDescriptionChange={setDescription}
-                  onOutlineChange={setOutline}
-              >
-                  <AiOutlineGenerator 
-                      description={description} 
-                      onOutlineChange={handleOutlineChange} 
-                  />
-              </CourseCreationForm>
+              <CourseCreationForm />
           </CardContent>
       </Card>
     );

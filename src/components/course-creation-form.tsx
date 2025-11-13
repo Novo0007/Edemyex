@@ -2,16 +2,16 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { createCourseAction } from '@/app/actions';
+import { useEffect, useState } from 'react';
+import { createCourseAction, generateCourseOutline } from '@/app/actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -22,17 +22,15 @@ function SubmitButton() {
   );
 }
 
-interface CourseCreationFormProps {
-    children: React.ReactNode;
-    outline: string;
-    onDescriptionChange: (value: string) => void;
-    onOutlineChange: (value: string) => void;
-}
-
-export default function CourseCreationForm({ children, outline, onDescriptionChange, onOutlineChange }: CourseCreationFormProps) {
+export default function CourseCreationForm() {
   const router = useRouter();
   const { toast } = useToast();
   
+  const [description, setDescription] = useState('');
+  const [outline, setOutline] = useState('');
+  const [aiTopic, setAiTopic] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const initialState = { errors: {}, success: false, courseId: null };
   const [state, dispatch] = useActionState(createCourseAction, initialState);
   
@@ -54,6 +52,32 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
     }
   }, [state, router, toast]);
 
+  const handleGenerateOutline = async () => {
+    if (!aiTopic || !description) {
+      toast({
+        title: "Topic and Description required",
+        description: "Please enter a topic and description for your course to use the AI assistant.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const result = await generateCourseOutline(aiTopic, description);
+      setOutline(result);
+      toast({
+          title: "Outline Generated!",
+          description: "The AI has created a new course outline for you."
+      });
+    } catch(e) {
+        toast({
+            title: "Generation Failed",
+            description: "There was an issue generating the course outline.",
+            variant: "destructive"
+        });
+    }
+    setIsGenerating(false);
+  };
 
   return (
       <form action={dispatch} className="space-y-6">
@@ -88,7 +112,8 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
             placeholder="Describe your course in detail..." 
             rows={5} 
             required 
-            onChange={(e) => onDescriptionChange(e.target.value)}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
           {state.errors?.description && <p className="text-sm text-destructive">{state.errors.description[0]}</p>}
         </div>
@@ -105,7 +130,34 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
           {state.errors?.imageUrl && <p className="text-sm text-destructive">{state.errors.imageUrl[0]}</p>}
         </div>
 
-        {children}
+        <Card className="bg-primary/5">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline text-xl">
+                <Wand2 className="text-primary" />
+                AI Course Outline Assistant
+                </CardTitle>
+                <CardDescription>
+                Provide a topic and description, and let our AI generate a structured course outline for you. You can then edit it below.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                <Label htmlFor="ai-topic">Course Topic</Label>
+                <div className="flex gap-2">
+                    <Input
+                    id="ai-topic"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    placeholder="e.g., The Basics of Digital Marketing"
+                    />
+                    <Button type="button" onClick={handleGenerateOutline} disabled={isGenerating}>
+                      {isGenerating ? <Loader2 className="animate-spin" /> : 'Generate'}
+                    </Button>
+                </div>
+                </div>
+            </CardContent>
+        </Card>
+
 
         <div className="space-y-2">
           <Label htmlFor="outline">Course Outline</Label>
@@ -116,7 +168,7 @@ export default function CourseCreationForm({ children, outline, onDescriptionCha
             rows={10} 
             required 
             value={outline}
-            onChange={(e) => onOutlineChange(e.target.value)}
+            onChange={(e) => setOutline(e.target.value)}
             className="bg-background font-mono text-sm"
           />
            {state.errors?.outline && <p className="text-sm text-destructive">{state.errors.outline[0]}</p>}
