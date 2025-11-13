@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn, getYouTubeEmbedUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
     const [showBuyButton, setShowBuyButton] = useState(false);
@@ -88,13 +89,57 @@ function VideoPreviewModal({ course, isOpen, onOpenChange }: { course: Course, i
     )
 }
 
-export default function CourseDetailsClient({ course }: { course: Course }) {
+function CourseDetailSkeleton() {
+  return (
+    <div className="container mx-auto max-w-5xl px-4 py-8">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <Skeleton className="mb-2 h-10 w-3/4" />
+          <Skeleton className="mb-4 h-6 w-full" />
+          <Skeleton className="mb-4 h-6 w-5/6" />
+          <div className="mb-6 flex items-center gap-2">
+            <Skeleton className="size-10 rounded-full" />
+            <Skeleton className="h-5 w-40" />
+          </div>
+          <Skeleton className="h-px w-full" />
+          <div className="mt-6">
+            <Skeleton className="mb-4 h-8 w-1/2" />
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+          </div>
+        </div>
+        <div className="md:col-span-1">
+          <div className="sticky top-24 rounded-lg border bg-card shadow-lg">
+            <Skeleton className="h-56 w-full rounded-t-lg" />
+            <div className="p-6">
+              <Skeleton className="mb-4 h-12 w-1/2" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+export default function CourseDetailsClient({ courseId }: { courseId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPreviewing, setIsPreviewing] = useState(false);
 
   const { user } = useUser();
   const firestore = useFirestore();
+
+  const courseRef = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return doc(firestore, 'courses', courseId);
+  }, [firestore, courseId]);
+
+  const { data: course, isLoading } = useDoc<Course>(courseRef);
 
   const isFavorited = user?.favoriteCreatorIds?.includes(course?.creatorId || '');
 
@@ -120,6 +165,10 @@ export default function CourseDetailsClient({ course }: { course: Course }) {
         toast({ title: 'Something went wrong', variant: 'destructive' });
         console.error("Favorite error:", error);
     }
+  }
+
+  if (isLoading) {
+    return <CourseDetailSkeleton />;
   }
 
   if (!course) {

@@ -3,92 +3,12 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { Course, User, Purchase } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
+// This file uses the Firebase Admin SDK.
+// It should only be used in server-side code (Server Actions, API Routes).
+// Client-side data fetching should use the hooks from `@/firebase` (useDoc, useCollection).
+
 const { firestore } = getFirebaseAdmin();
-
-const coursesCollection = firestore.collection('courses');
 const usersCollection = firestore.collection('users');
-
-const ALLOWED_IMAGE_HOSTS = [
-  'images.unsplash.com',
-  'picsum.photos',
-  'storage.googleapis.com',
-  'avatar.vercel.sh',
-];
-
-const validateAndGetImage = (course: any) => {
-    const placeholder = {
-        imageUrl: 'https://picsum.photos/seed/error/600/400',
-    };
-
-    if (course.imageUrl) {
-        try {
-            if (course.imageUrl.startsWith('data:image')) {
-                 return { imageUrl: course.imageUrl };
-            }
-            const url = new URL(course.imageUrl);
-            if (ALLOWED_IMAGE_HOSTS.includes(url.hostname)) {
-                return {
-                    imageUrl: course.imageUrl,
-                };
-            }
-        } catch (e) {}
-    }
-    
-    const categoryName = (course.category || 'default').toLowerCase();
-    const categoryImage = PlaceHolderImages.find(img => img.id.includes(categoryName));
-    
-    return categoryImage ? 
-        { imageUrl: categoryImage.imageUrl } : 
-        placeholder;
-};
-
-export async function getCourses(): Promise<Course[]> {
-  try {
-    const snapshot = await coursesCollection.where('status', '==', 'published').get();
-    const result: Course[] = [];
-    for (const d of snapshot.docs) {
-      const courseData = d.data() as any;
-      const { imageUrl } = validateAndGetImage(courseData);
-      const creator = await getUserById(courseData.creatorId);
-
-      result.push({ 
-          ...courseData, 
-          id: d.id,
-          imageUrl,
-          creator: creator?.name || 'Unknown Creator',
-          creatorAvatar: creator?.profileImageUrl || '',
-      } as Course);
-    }
-    return result;
-  } catch (error) {
-    console.error("Error fetching courses:", error);
-    return [];
-  }
-}
-
-export async function getCourseById(id: string): Promise<Course | undefined> {
-  try {
-    const docRef = coursesCollection.doc(id);
-    const docSnap = await docRef.get();
-    if (docSnap.exists) {
-      const courseData = docSnap.data() as any;
-      const { imageUrl } = validateAndGetImage(courseData);
-      const creator = await getUserById(courseData.creatorId);
-      
-      return { 
-          ...courseData, 
-          id: docSnap.id,
-          imageUrl,
-          creator: creator?.name || 'Unknown Creator',
-          creatorAvatar: creator?.profileImageUrl || '',
-      } as Course;
-    }
-    return undefined;
-  } catch (error) {
-    console.error("Error fetching course by id:", error);
-    return undefined;
-  }
-}
 
 export async function getUserById(userId: string): Promise<User | undefined> {
   try {
@@ -103,35 +23,6 @@ export async function getUserById(userId: string): Promise<User | undefined> {
     return undefined;
   }
 }
-
-export async function getPurchasedCourses(userId: string): Promise<Course[]> {
-    const user = await getUserById(userId);
-    if (!user || !user.purchasedCourseIds || user.purchasedCourseIds.length === 0) {
-        return [];
-    }
-
-    try {
-        const courseIds = user.purchasedCourseIds.slice(0, 30);
-        if(courseIds.length === 0) return [];
-        
-        const snapshot = await coursesCollection.where('id', 'in', courseIds).get();
-        const result: Course[] = [];
-        for (const d of snapshot.docs) {
-          const courseData = d.data() as any;
-          const { imageUrl } = validateAndGetImage(courseData);
-          result.push({ 
-              ...courseData, 
-              id: d.id,
-              imageUrl,
-          } as Course);
-        }
-        return result;
-    } catch (error) {
-        console.error("Error fetching purchased courses:", error);
-        return [];
-    }
-}
-
 
 export async function grantCourseAccess(userId: string, courseId: string, creatorId: string, price: number): Promise<boolean> {
     try {
@@ -168,8 +59,11 @@ export async function grantCourseAccess(userId: string, courseId: string, creato
 }
 
 export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 'status' | 'creator' | 'creatorAvatar'>, creatorId: string): Promise<Course> {
+    const { firestore } = getFirebaseAdmin();
+    const coursesCollection = firestore.collection('courses');
     const docRef = coursesCollection.doc();
-
+    
+    // Fetch creator details using the standard user fetching function
     const creator = await getUserById(creatorId);
 
     if (!creator) {
@@ -194,10 +88,4 @@ export async function newCourse(courseData: Omit<Course, 'id' | 'creatorId' | 's
 
     await docRef.set(newCourseData);
     return newCourseData;
-}
-
-
-export async function getRecommendedCourses(): Promise<Course[]> {
-  const all = await getCourses();
-  return all.slice(0, 3);
 }
