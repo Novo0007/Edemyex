@@ -2,7 +2,6 @@
 'use server';
 
 import { notFound } from 'next/navigation';
-import { getCourseById } from '@/lib/data';
 import CheckoutForm from './checkout-form';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,15 +47,9 @@ export default async function CheckoutPage({ params }: { params: { id: string } 
     notFound();
   }
 
-  const course = await getCourseById(id);
-
-  if (!course) {
-    notFound();
-  }
-
   return (
     <Suspense fallback={<CheckoutSkeleton />}>
-      <CheckoutForm course={course} />
+      <CheckoutForm courseId={id} />
     </Suspense>
   );
 }

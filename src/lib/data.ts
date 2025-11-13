@@ -22,23 +22,6 @@ export async function getUserById(userId: string): Promise<User | undefined> {
   }
 }
 
-export async function getCourseById(courseId: string): Promise<Course | null> {
-    try {
-        const { firestore } = getFirebaseAdmin();
-        const courseRef = firestore.collection('courses').doc(courseId);
-        const courseSnap = await courseRef.get();
-
-        if (courseSnap.exists) {
-            return { id: courseSnap.id, ...courseSnap.data() } as Course;
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error fetching course ${courseId}:`, error);
-        return null;
-    }
-}
-
-
 export async function grantCourseAccess(userId: string, courseId: string, creatorId: string, price: number): Promise<boolean> {
     try {
         const { firestore } = getFirebaseAdmin();

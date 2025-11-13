@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, notFound } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Course } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createRazorpayOrder } from '@/app/actions';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 
 declare global {
     interface Window {
@@ -20,7 +22,7 @@ declare global {
     }
 }
 
-export default function CheckoutForm({ course }: { course: Course }) {
+export default function CheckoutForm({ courseId }: { courseId: string }) {
     const [isProcessing, setIsProcessing] = useState(false);
     
     const [name, setName] = useState('');
@@ -30,8 +32,15 @@ export default function CheckoutForm({ course }: { course: Course }) {
     const router = useRouter();
     
     const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
     const { toast } = useToast();
 
+    const courseRef = useMemoFirebase(() => {
+        if (!firestore || !courseId) return null;
+        return doc(firestore, 'courses', courseId);
+    }, [firestore, courseId]);
+
+    const { data: course, isLoading: isCourseLoading } = useDoc<Course>(courseRef);
 
     useEffect(() => {
         if (user) {
@@ -119,7 +128,7 @@ export default function CheckoutForm({ course }: { course: Course }) {
         rzp.open();
     };
 
-    if (isUserLoading) {
+    if (isUserLoading || isCourseLoading) {
         return <CheckoutFormSkeleton />;
     }
 
