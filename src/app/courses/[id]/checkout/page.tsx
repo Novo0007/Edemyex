@@ -1,7 +1,8 @@
+
 'use server';
 
 import { notFound } from 'next/navigation';
-import { getCourseById } from '@/app/actions';
+import { getCourseById } from '@/lib/data';
 import CheckoutForm from './checkout-form';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -2,31 +2,13 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { grantCourseAccess, newCourse, getUserById } from '@/lib/data';
+import { grantCourseAccess, newCourse } from '@/lib/data';
 import { getCreatorFromToken, getUserFromToken } from '@/app/api/creator/dashboard/route';
 import { suggestCourseOutline } from '@/ai/ai-course-outline-suggestions';
 import { headers } from 'next/headers';
 import { getRazorpayInstance } from '@/lib/razorpay';
 import type { Course } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
-
-export async function getCourseById(id: string) {
-    const { firestore } = getFirebaseAdmin();
-    const docRef = firestore.collection('courses').doc(id);
-    const docSnap = await docRef.get();
-
-    if (docSnap.exists) {
-        const courseData = docSnap.data() as Omit<Course, 'id'>;
-        const creator = await getUserById(courseData.creatorId);
-        return {
-            id: docSnap.id,
-            ...courseData,
-            creator: creator?.name || 'Unknown Creator',
-            creatorAvatar: creator?.profileImageUrl || '',
-        } as Course;
-    }
-    return undefined;
-}
 
 export async function purchaseCourse(userId: string, courseId: string, creatorId: string, price: number) {
   const result = await grantCourseAccess(userId, courseId, creatorId, price);
