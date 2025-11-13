@@ -24,7 +24,8 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, notFound } from 'next/navigation';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Logo } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -57,18 +58,25 @@ export default function AdminLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const pathname = usePathname();
+  const router = useRouter();
 
+  const shouldBlockAccess = !user || user.role !== 'admin';
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (isUserLoading) return;
+    if (!user) {
+      router.replace('/login');
+    } else if (user.role !== 'admin') {
+      router.replace('/');
+    }
+  }, [isUserLoading, router, user]);
+
+  if (isUserLoading || shouldBlockAccess) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p>Loading...</p>
       </div>
     );
-  }
-  
-  if (!user || user.role !== 'admin') {
-     notFound();
   }
 
   return (

@@ -23,7 +23,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, notFound } from 'next/navigation';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Logo } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -57,20 +58,45 @@ export default function CreatorLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const pathname = usePathname();
+  const router = useRouter();
+  const isCreator = user?.role === 'creator' && user.creatorStatus === 'approved';
+
+  useEffect(() => {
+    if (isUserLoading) {
+      return;
+    }
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+    if (user.creatorStatus === 'pending' || user.creatorStatus === 'rejected') {
+      return;
+    }
+    if (!isCreator) {
+      router.replace('/my-courses');
+    }
+  }, [isCreator, isUserLoading, router, user]);
 
   if (isUserLoading) {
     return <div className="flex h-screen items-center justify-center"><p>Loading...</p></div>
   }
   
-  // Only allow approved creators to access this layout. Admins are routed to their own dash.
-  if (!user || user.role !== 'creator') {
-    if (user && user.creatorStatus === 'pending') {
-        return <CreatorPendingPage />;
+  if (!user) {
+    return null;
+  }
+
+  if (!isCreator) {
+    if (user.creatorStatus === 'pending') {
+      return <CreatorPendingPage />;
     }
-    if (user && user.creatorStatus === 'rejected') {
-        return <CreatorRejectedPage />;
+    if (user.creatorStatus === 'rejected') {
+      return <CreatorRejectedPage />;
     }
-    notFound(); 
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Redirecting...</p>
+      </div>
+    );
   }
 
   return (

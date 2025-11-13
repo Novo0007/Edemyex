@@ -5,14 +5,14 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { subMonths, format, startOfMonth } from 'date-fns';
 import type { Purchase, User } from '@/lib/types';
 import { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
+import { extractAuthToken } from '@/lib/auth-token';
 
 // Helper to get user and check role
 export async function getUserFromToken(headers: ReadonlyHeaders): Promise<(User & {id: string}) | null> {
-    const authorization = headers.get('authorization');
-    if (!authorization?.startsWith('Bearer ')) {
+    const idToken = extractAuthToken();
+    if (!idToken) {
         return null;
     }
-    const idToken = authorization.split('Bearer ')[1];
     
     const { auth, firestore } = getFirebaseAdmin();
     try {
