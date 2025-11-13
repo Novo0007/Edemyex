@@ -25,10 +25,6 @@ export default function CourseFormContainer() {
     }
   }, [isUserLoading, user, router]);
 
-  const handleOutlineChange = (newOutline: string) => {
-    setOutline(newOutline);
-  };
-
   if (isUserLoading) {
     return (
       <Card>
