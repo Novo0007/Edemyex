@@ -1,9 +1,10 @@
+
 import Razorpay from 'razorpay';
 
 // This function now initializes and returns a new Razorpay instance on each call,
 // ensuring it uses the current environment variables at runtime.
 export function getRazorpayInstance() {
-    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
     if (!keyId || !keySecret) {
