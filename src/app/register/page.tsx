@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocument } from '@/firebase/non-blocking-updates';
 
 
 export default function RegisterPage() {
@@ -46,15 +46,15 @@ export default function RegisterPage() {
       const userDocRef = doc(firestore, 'users', user.uid);
       
       const isAdmin = email === 'mynameisjyotirmoy@gmail.com';
-      const finalRole = isAdmin ? 'admin' : 'user'; // All new signups are 'user' role initially
-      const creatorStatus = isAdmin ? 'approved' : (accountType === 'creator' ? 'pending' : 'none');
+      const finalRole = isAdmin ? 'admin' : 'user';
+      const creatorStatus = accountType === 'creator' ? 'pending' : 'none';
 
-      setDocumentNonBlocking(userDocRef, {
+      await setDocument(userDocRef, {
         id: user.uid,
         name: name,
         email: user.email,
         role: finalRole,
-        creatorStatus: creatorStatus,
+        creatorStatus: isAdmin ? 'approved' : creatorStatus,
         purchasedCourseIds: [],
         favoriteCreatorIds: [],
         profileImageUrl: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
@@ -86,7 +86,8 @@ export default function RegisterPage() {
         }
       }
       setError(errorMessage);
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   };
 
