@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Library, PlusCircle } from 'lucide-react';
+import { BookOpen, Library, PlusCircle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
   { href: '/#courses', label: 'Browse', icon: BookOpen, match: (pathname: string) => pathname === '/' || pathname.startsWith('/courses') },
   { href: '/my-courses', label: 'My Courses', icon: Library, match: (pathname: string) => pathname.startsWith('/my-courses') },
   { href: '/create', label: 'Create', icon: PlusCircle, match: (pathname:string) => pathname.startsWith('/create') },
+  { href: '/contact', label: 'Contact', icon: User, match: (pathname:string) => pathname.startsWith('/contact') },
 ];
 
 export default function BottomNav() {

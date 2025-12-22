@@ -21,6 +21,7 @@ const navLinks = [
   { href: '/#courses', label: 'Browse' },
   { href: '/my-courses', label: 'My Courses' },
   { href: '/create', label: 'Create Course' },
+  { href: '/contact', label: 'Contact Us' },
 ];
 
 export default function Header() {

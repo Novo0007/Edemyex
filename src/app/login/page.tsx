@@ -58,6 +58,8 @@ export default function LoginPage() {
   };
 
   return (
+
+    
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -76,6 +78,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -100,8 +103,12 @@ export default function LoginPage() {
                 Sign Up
               </Link>
             </p>
+            
         </CardFooter>
+        
       </Card>
+      
     </div>
+    
   );
 }
