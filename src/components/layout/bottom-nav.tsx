@@ -1,15 +1,15 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Library, PlusCircle, User } from 'lucide-react';
+import { LayoutGrid, Shield, User, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/#courses', label: 'Browse', icon: BookOpen, match: (pathname: string) => pathname === '/' || pathname.startsWith('/courses') },
-  { href: '/my-courses', label: 'My Courses', icon: Library, match: (pathname: string) => pathname.startsWith('/my-courses') },
-  { href: '/create', label: 'Create', icon: PlusCircle, match: (pathname:string) => pathname.startsWith('/create') },
-  { href: '/contact', label: 'Contact', icon: User, match: (pathname:string) => pathname.startsWith('/contact') },
+  { href: '/', label: 'Home', icon: Shield, match: (pathname: string) => pathname === '/' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, match: (pathname: string) => pathname.startsWith('/dashboard') || pathname.startsWith('/extensions') },
+  { href: '/profile', label: 'Profile', icon: User, match: (pathname:string) => pathname.startsWith('/profile') },
 ];
 
 export default function BottomNav() {

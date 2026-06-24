@@ -1,59 +1,26 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Courses: public read; creator or admin can write
-    match /courses/{courseId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (isCourseOwner(get(/databases/$(database)/documents/courses/$(courseId)).data.creatorId) || isAdmin());
-    }
-    
-    // Top-level purchases collection rules
-    match /purchases/{purchaseId} {
-      // Allow user who made purchase OR the creator of the course to read. Admins can also read.
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isCourseOwner(resource.data.creatorId) || isAdmin());
-
-      // Allow creators to query their own sales and admins to query all sales
-      allow list: if isSignedIn() && ((request.query.limit <= 30 && request.query.where[0][0] == 'creatorId' && request.query.where[0][2] == request.auth.uid) || isAdmin());
-
-      // Allow authenticated users to create purchases for themselves
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
-
-      // Disallow updates and deletes for data integrity
-      allow update, delete: if false;
-    }
-
-
-    match /users/{userId} {
-      // A user can read their own document, or an admin can read any user document.
-      // Public reads of creator profiles are restricted to protect payoutDetails.
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
-      
-      // Allow authenticated users to query for other users, but the `get` rule above will
-      // be enforced on each document, effectively hiding sensitive data.
-      allow list: if isSignedIn();
-
-      // Only the user or an admin can modify their own profile.
-      allow update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
-      
-      // Anyone can create their own user document when signing up.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-    }
-
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
+    
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    function isCourseOwner(creatorId) {
-        return request.auth.uid == creatorId;
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
-    function isAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    match /extensions/{extensionId} {
+      // Developers can manage their own extensions
+      allow read, write: if isSignedIn() && (resource == null || resource.data.developerId == request.auth.uid);
+      
+      match /licenses/{licenseId} {
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/extensions/$(extensionId)).data.developerId == request.auth.uid;
+      }
     }
   }
 }
