@@ -5,8 +5,8 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User as FirebaseAuthUser } from 'firebase/auth';
-import { onAuthStateChanged, getIdToken } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { onAuthStateChanged } from 'firebase/auth';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export interface AppUser {
   id: string;
@@ -61,38 +61,39 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-            const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-            const unsubDoc = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const userData = docSnap.data() as AppUser;
-                    setUserAuthState({
-                        user: { ...firebaseUser, ...userData },
-                        isUserLoading: false,
-                        userError: null,
-                    });
-                } else {
-                     const defaultAppUser: AppUser = { 
-                        id: firebaseUser.uid,
-                        role: 'developer',
-                        name: firebaseUser.displayName || '', 
-                        email: firebaseUser.email || '' 
-                     };
-                     setUserAuthState({ user: { ...firebaseUser, ...defaultAppUser }, isUserLoading: false, userError: null });
-                }
-            }, (error) => {
-                setUserAuthState({ user: null, isUserLoading: false, userError: error });
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        const unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const userData = docSnap.data() as AppUser;
+            setUserAuthState({
+              user: { ...firebaseUser, ...userData },
+              isUserLoading: false,
+              userError: null,
             });
-            return () => unsubDoc();
-        } else {
-             setUserAuthState({ user: null, isUserLoading: false, userError: null });
-        }
+          } else {
+            // Default user data if doc doesn't exist yet (e.g., during registration)
+            const defaultAppUser: AppUser = {
+              id: firebaseUser.uid,
+              role: 'developer',
+              name: firebaseUser.displayName || '',
+              email: firebaseUser.email || '',
+            };
+            setUserAuthState({ user: { ...firebaseUser, ...defaultAppUser }, isUserLoading: false, userError: null });
+          }
+        }, (error) => {
+          setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        });
+        return () => unsubscribeDoc();
+      } else {
+        setUserAuthState({ user: null, isUserLoading: false, userError: null });
+      }
     }, (error) => {
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      setUserAuthState({ user: null, isUserLoading: false, userError: error });
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [auth, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {
@@ -119,7 +120,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
-    return { firebaseApp: null, firestore: null, auth: null, user: null, isUserLoading: true, userError: null, areServicesAvailable: false };
+    throw new Error('useFirebase must be used within a FirebaseProvider');
   }
   return context;
 };
@@ -140,15 +141,15 @@ export function useMemoFirebase<T>(factory: () => T | null, deps: DependencyList
 }
 
 export const useIdToken = (): string | null => {
-    const { auth } = useFirebase();
-    const [idToken, setIdToken] = useState<string | null>(null);
-    useEffect(() => {
-        if (!auth) return;
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) user.getIdToken().then(setIdToken);
-            else setIdToken(null);
-        });
-        return () => unsubscribe();
-    }, [auth]);
-    return idToken;
-}
+  const { auth } = useFirebase();
+  const [idToken, setIdToken] = useState<string | null>(null);
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) user.getIdToken().then(setIdToken);
+      else setIdToken(null);
+    });
+    return () => unsubscribe();
+  }, [auth]);
+  return idToken;
+};

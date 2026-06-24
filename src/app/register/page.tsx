@@ -1,4 +1,6 @@
+
 'use client';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,18 +12,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2, ShieldCheck } from 'lucide-react';
 import { setDocument } from '@/firebase/non-blocking-updates';
-
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [accountType, setAccountType] = useState<'user' | 'creator'>('user');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const auth = useAuth();
   const firestore = useFirestore();
@@ -30,12 +28,11 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-     if (!auth || !firestore) {
-        setError("Authentication service is not available.");
-        return;
+    if (!auth || !firestore) {
+      toast({ title: "Services are not available.", variant: 'destructive' });
+      return;
     }
     setIsLoading(true);
-    setError(null);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -45,28 +42,24 @@ export default function RegisterPage() {
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
+      // Admin check for a specific email
       const isAdmin = email === 'mynameisjyotirmoy@gmail.com';
-      const finalRole = isAdmin ? 'admin' : 'user';
-      const creatorStatus = accountType === 'creator' ? 'pending' : 'none';
+      const role = isAdmin ? 'admin' : 'developer';
 
       await setDocument(userDocRef, {
         id: user.uid,
         name: name,
         email: user.email,
-        role: finalRole,
-        creatorStatus: isAdmin ? 'approved' : creatorStatus,
-        purchasedCourseIds: [],
-        favoriteCreatorIds: [],
-        profileImageUrl: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
+        role: role,
+        profileImageUrl: `https://avatar.vercel.sh/${user.uid}.png`,
+        createdAt: new Date().toISOString(),
       }, { merge: true });
 
       toast({
-        title: 'Registration Successful',
-        description: accountType === 'creator' 
-            ? "Your creator application is pending review. We'll notify you upon approval."
-            : 'Welcome to Edemy!',
+        title: 'Account Created',
+        description: 'Welcome to the GuardExt developer community.',
       });
-      router.push('/my-courses');
+      router.push('/dashboard');
 
     } catch (err: any) {
       let errorMessage = 'An unexpected error occurred.';
@@ -75,9 +68,6 @@ export default function RegisterPage() {
           case 'auth/email-already-in-use':
             errorMessage = 'This email address is already in use.';
             break;
-          case 'auth/invalid-email':
-            errorMessage = 'Please enter a valid email address.';
-            break;
           case 'auth/weak-password':
             errorMessage = 'Password should be at least 6 characters long.';
             break;
@@ -85,63 +75,43 @@ export default function RegisterPage() {
             errorMessage = 'Failed to register. Please try again.';
         }
       }
-      setError(errorMessage);
+      toast({ title: 'Registration Failed', description: errorMessage, variant: 'destructive' });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md border-none shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="font-headline text-3xl">Create an Account</CardTitle>
-          <CardDescription>Join Edemy to start learning or teaching</CardDescription>
+          <div className="flex justify-center mb-4">
+            <div className="rounded-full bg-primary/10 p-3">
+              <ShieldCheck className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="font-headline text-3xl">Developer Registration</CardTitle>
+          <CardDescription>Start protecting your extensions today</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
-             <div className="space-y-2">
-              <Label>I want to:</Label>
-              <div className="flex items-center space-x-4 rounded-lg border p-2">
-                <div
-                  className={cn(
-                    'flex-1 cursor-pointer rounded-md p-2 text-center',
-                    accountType === 'user' && 'bg-primary text-primary-foreground'
-                  )}
-                  onClick={() => setAccountType('user')}
-                >
-                  Learn
-                </div>
-                <div
-                  className={cn(
-                    'flex-1 cursor-pointer rounded-md p-2 text-center',
-                    accountType === 'creator' && 'bg-primary text-primary-foreground'
-                  )}
-                  onClick={() => setAccountType('creator')}
-                >
-                  Create
-                </div>
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Jane Developer"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Work Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="jane@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -152,28 +122,25 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Minimum 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
               />
             </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={isLoading || !auth || !firestore}>
-              {isLoading ? <Loader2 className="animate-spin" /> : `Create ${accountType === 'creator' ? 'Creator' : 'Learner'} Account`}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin" /> : 'Create Account'}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/login" className="font-semibold text-primary hover:underline">
-                Log In
-              </Link>
-            </p>
+        <CardFooter className="flex flex-col gap-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Already have a developer account?{' '}
+            <Link href="/login" className="font-semibold text-primary hover:underline">
+              Sign In
+            </Link>
+          </p>
         </CardFooter>
       </Card>
     </div>
