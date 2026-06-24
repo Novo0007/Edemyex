@@ -1,11 +1,11 @@
-
 /**
- * GuardExt Protection Logic (Production Version)
+ * Weblock Protection Logic
  * Monitors the remote kill switch status and license validity.
  */
 
-// Replace with your actual deployed URL
+// IMPORTANT: Replace with your actual deployed URL (no trailing slash)
 const API_BASE_URL = 'https://your-weblock-app.vercel.app'; 
+// IMPORTANT: Replace with the Extension ID generated in your Weblock Dashboard
 const EXTENSION_ID = 'YOUR_EXTENSION_ID_FROM_DASHBOARD';
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -13,8 +13,8 @@ chrome.runtime.onInstalled.addListener(() => {
   checkLicenseStatus();
 });
 
-// Re-check license every hour to respect the remote kill switch
-chrome.alarms.create('checkSecurity', { periodInMinutes: 60 });
+// Re-check security status every 30 minutes
+chrome.alarms.create('checkSecurity', { periodInMinutes: 30 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'checkSecurity') {
     checkLicenseStatus();
@@ -39,14 +39,14 @@ async function checkLicenseStatus() {
     const result = await response.json();
     
     if (!result.valid) {
-      // result.reason will tell us if it's a global lock or just a bad key
+      // result.reason will be 'EXTENSION_LOCKED' if the remote kill switch is ON
       lockExtension(result.message, result.reason);
     } else {
       unlockExtension();
     }
   } catch (error) {
     console.error('Security handshake failed:', error);
-    // Be conservative: lock if we can't verify status (Offline protection)
+    // Optional: lock if offline protection is desired
     // lockExtension('Unable to reach security server.');
   }
 }
@@ -62,8 +62,8 @@ function lockExtension(reason, code) {
     lockCode: code 
   });
   
-  // Optional: Injects code into tabs to block usage
-  // chrome.scripting.executeScript(...)
+  // Notify other parts of your extension that it is locked
+  chrome.runtime.sendMessage({ status: 'locked', reason, code });
 }
 
 function unlockExtension() {

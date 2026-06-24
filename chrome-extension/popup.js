@@ -1,36 +1,52 @@
-
-const API_BASE_URL = 'https://your-guardext-app.vercel.app';
+// IMPORTANT: Replace with your actual deployed URL
+const API_BASE_URL = 'https://your-weblock-app.vercel.app';
+// IMPORTANT: Replace with the Extension ID from your dashboard
 const EXTENSION_ID = 'YOUR_EXTENSION_ID_FROM_DASHBOARD';
 
-document.getElementById('activateBtn').addEventListener('click', async () => {
-  const key = document.getElementById('licenseInput').value.trim();
+document.addEventListener('DOMContentLoaded', async () => {
+  const { isLocked, licenseKey } = await chrome.storage.local.get(['isLocked', 'licenseKey']);
   const statusDiv = document.getElementById('status');
-  
-  if (!key) return;
+  const activateBtn = document.getElementById('activateBtn');
+  const input = document.getElementById('licenseInput');
 
-  statusDiv.innerText = 'Verifying...';
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ extensionId: EXTENSION_ID, licenseKey: key })
-    });
-    
-    const result = await response.json();
-    
-    if (result.valid) {
-      await chrome.storage.local.set({ licenseKey: key, isLocked: false });
-      statusDiv.style.color = 'green';
-      statusDiv.innerText = 'Success! Extension activated.';
-      chrome.action.setPopup({ popup: 'popup.html' });
-      setTimeout(() => window.close(), 1500);
-    } else {
-      statusDiv.style.color = 'red';
-      statusDiv.innerText = result.message || 'Invalid license key.';
-    }
-  } catch (error) {
-    statusDiv.style.color = 'red';
-    statusDiv.innerText = 'Server error. Try again later.';
+  if (licenseKey && !isLocked) {
+    input.value = licenseKey;
+    statusDiv.innerText = 'Extension is active and secure.';
+    statusDiv.style.color = 'green';
   }
+
+  activateBtn.addEventListener('click', async () => {
+    const key = input.value.trim();
+    
+    if (!key) {
+      statusDiv.innerText = 'Please enter a key.';
+      return;
+    }
+
+    statusDiv.innerText = 'Verifying...';
+    statusDiv.style.color = '#666';
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extensionId: EXTENSION_ID, licenseKey: key })
+      });
+      
+      const result = await response.json();
+      
+      if (result.valid) {
+        await chrome.storage.local.set({ licenseKey: key, isLocked: false });
+        statusDiv.style.color = 'green';
+        statusDiv.innerText = 'Success! Extension activated.';
+        setTimeout(() => window.close(), 1500);
+      } else {
+        statusDiv.style.color = 'red';
+        statusDiv.innerText = result.message || 'Invalid license key.';
+      }
+    } catch (error) {
+      statusDiv.style.color = 'red';
+      statusDiv.innerText = 'Network error. Check connection.';
+    }
+  });
 });
