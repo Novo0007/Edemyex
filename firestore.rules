@@ -2,23 +2,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
     
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Developer profiles
     match /users/{userId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
+    // Extensions
     match /extensions/{extensionId} {
-      // Developers can manage their own extensions
-      allow read, write: if isSignedIn() && (resource == null || resource.data.developerId == request.auth.uid);
+      // Allow creation if the developerId matches the authenticated user
+      allow create: if isSignedIn() && request.resource.data.developerId == request.auth.uid;
       
+      // Allow read/update/delete if the user is the owner
+      allow read, update, delete: if isSignedIn() && resource.data.developerId == request.auth.uid;
+      
+      // Licenses sub-collection
       match /licenses/{licenseId} {
+        // Only the extension owner (developer) can manage licenses
         allow read, write: if isSignedIn() && get(/databases/$(database)/documents/extensions/$(extensionId)).data.developerId == request.auth.uid;
       }
     }

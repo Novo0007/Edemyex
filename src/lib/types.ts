@@ -1,10 +1,13 @@
 
+import { Timestamp } from 'firebase/firestore';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: 'developer' | 'admin';
   profileImageUrl?: string;
+  createdAt?: string;
 }
 
 export interface Extension {
@@ -14,7 +17,7 @@ export interface Extension {
   description: string;
   status: 'active' | 'locked' | 'maintenance';
   secretKey: string;
-  createdAt: any;
+  createdAt: Timestamp;
 }
 
 export interface License {
@@ -23,5 +26,6 @@ export interface License {
   key: string;
   userEmail: string;
   status: 'active' | 'revoked' | 'expired';
-  expiresAt?: any;
+  createdAt: Timestamp;
+  expiresAt?: Timestamp;
 }

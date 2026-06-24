@@ -1,17 +1,31 @@
 
 {
   "entities": {
+    "Developer": {
+      "title": "Developer",
+      "type": "object",
+      "description": "A developer using Weblock to protect their Chrome extensions.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["developer", "admin"] },
+        "profileImageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
     "Extension": {
       "title": "Extension",
       "type": "object",
-      "description": "A Chrome extension being managed by the platform.",
+      "description": "A Chrome extension registered on the Weblock platform.",
       "properties": {
         "id": { "type": "string" },
-        "developerId": { "type": "string", "description": "The UID of the developer who owns this extension." },
+        "developerId": { "type": "string", "description": "The UID of the developer owner." },
         "name": { "type": "string" },
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["active", "locked", "maintenance"] },
-        "secretKey": { "type": "string", "description": "Private key used for extension-to-backend communication." },
+        "secretKey": { "type": "string", "description": "Private key for SDK authentication." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "developerId", "name", "status", "secretKey"]
@@ -19,28 +33,16 @@
     "License": {
       "title": "License",
       "type": "object",
-      "description": "A license key for a specific extension and end-user.",
+      "description": "A license key issued to an end-user for a specific extension.",
       "properties": {
         "id": { "type": "string" },
         "extensionId": { "type": "string" },
-        "key": { "type": "string" },
+        "key": { "type": "string", "description": "The actual license key string." },
         "userEmail": { "type": "string", "format": "email" },
         "status": { "type": "string", "enum": ["active", "revoked", "expired"] },
-        "expiresAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "extensionId", "key", "userEmail", "status"]
-    },
-    "User": {
-      "title": "User",
-      "type": "object",
-      "description": "A developer using GuardExt.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "role": { "type": "string", "enum": ["developer", "admin"] }
-      },
-      "required": ["id", "name", "email", "role"]
     }
   },
   "auth": {
@@ -48,16 +50,16 @@
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": { "$ref": "#/entities/User" },
-      "description": "Developer profiles."
+      "schema": { "$ref": "#/backend/entities/Developer" },
+      "description": "Store for developer user profiles."
     },
     "/extensions/{extensionId}": {
-      "schema": { "$ref": "#/entities/Extension" },
-      "description": "Metadata for registered extensions."
+      "schema": { "$ref": "#/backend/entities/Extension" },
+      "description": "Root collection for all protected extensions."
     },
     "/extensions/{extensionId}/licenses/{licenseId}": {
-      "schema": { "$ref": "#/entities/License" },
-      "description": "License keys issued for a specific extension."
+      "schema": { "$ref": "#/backend/entities/License" },
+      "description": "Sub-collection for license keys associated with a specific extension."
     }
   }
 }
