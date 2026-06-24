@@ -1,31 +1,32 @@
+
 /**
- * Weblock Protection Logic
- * Monitors the remote kill switch status and license validity.
+ * Weblock Security Heartbeat
+ * Monitors remote kill switch and license validity.
  */
 
-// IMPORTANT: Replace with your actual deployed URL (no trailing slash)
-const API_BASE_URL = 'https://your-weblock-app.vercel.app'; 
-// IMPORTANT: Replace with the Extension ID generated in your Weblock Dashboard
-const EXTENSION_ID = 'YOUR_EXTENSION_ID_FROM_DASHBOARD';
+// REPLACE with your actual deployed URL if different
+const API_BASE_URL = 'https://weblockk.netlify.app'; 
+// REPLACE with your Extension ID from the Weblock Dashboard
+const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE';
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Weblock Security Active');
-  checkLicenseStatus();
+  console.log('Weblock Security Initialized');
+  checkSecurityStatus();
 });
 
-// Re-check security status every 30 minutes
-chrome.alarms.create('checkSecurity', { periodInMinutes: 30 });
+// Check security every 15 minutes for maximum protection
+chrome.alarms.create('securityCheck', { periodInMinutes: 15 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'checkSecurity') {
-    checkLicenseStatus();
+  if (alarm.name === 'securityCheck') {
+    checkSecurityStatus();
   }
 });
 
-async function checkLicenseStatus() {
+async function checkSecurityStatus() {
   const { licenseKey } = await chrome.storage.local.get(['licenseKey']);
   
   if (!licenseKey) {
-    lockExtension('No license key found.');
+    lockExtension('Activation Required', 'NO_LICENSE');
     return;
   }
 
@@ -39,21 +40,16 @@ async function checkLicenseStatus() {
     const result = await response.json();
     
     if (!result.valid) {
-      // result.reason will be 'EXTENSION_LOCKED' if the remote kill switch is ON
       lockExtension(result.message, result.reason);
     } else {
       unlockExtension();
     }
   } catch (error) {
-    console.error('Security handshake failed:', error);
-    // Optional: lock if offline protection is desired
-    // lockExtension('Unable to reach security server.');
+    console.warn('Weblock heartbeat failed. Retrying in next cycle.');
+    // Keep current state if server is unreachable to allow offline usage if preferred
   }
 }
 
-/**
- * Disables extension functionality and shows the lock screen
- */
 function lockExtension(reason, code) {
   chrome.action.setPopup({ popup: 'locked.html' });
   chrome.storage.local.set({ 
@@ -62,8 +58,16 @@ function lockExtension(reason, code) {
     lockCode: code 
   });
   
-  // Notify other parts of your extension that it is locked
-  chrome.runtime.sendMessage({ status: 'locked', reason, code });
+  // Show notification for important locks
+  if (code === 'EXTENSION_LOCKED') {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon128.png',
+      title: 'Access Suspended',
+      message: 'This extension has been remotely locked by the developer.',
+      priority: 2
+    });
+  }
 }
 
 function unlockExtension() {

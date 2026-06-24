@@ -1,30 +1,26 @@
-// IMPORTANT: Replace with your actual deployed URL
-const API_BASE_URL = 'https://your-weblock-app.vercel.app';
-// IMPORTANT: Replace with the Extension ID from your dashboard
-const EXTENSION_ID = 'YOUR_EXTENSION_ID_FROM_DASHBOARD';
+
+const API_BASE_URL = 'https://weblockk.netlify.app';
+const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const { isLocked, licenseKey } = await chrome.storage.local.get(['isLocked', 'licenseKey']);
   const statusDiv = document.getElementById('status');
   const activateBtn = document.getElementById('activateBtn');
   const input = document.getElementById('licenseInput');
+  
+  const { isLocked, licenseKey } = await chrome.storage.local.get(['isLocked', 'licenseKey']);
 
   if (licenseKey && !isLocked) {
     input.value = licenseKey;
-    statusDiv.innerText = 'Extension is active and secure.';
-    statusDiv.style.color = 'green';
+    statusDiv.innerText = '✓ Extension is active and secure.';
+    statusDiv.className = 'status success';
   }
 
   activateBtn.addEventListener('click', async () => {
     const key = input.value.trim();
-    
-    if (!key) {
-      statusDiv.innerText = 'Please enter a key.';
-      return;
-    }
+    if (!key) return;
 
-    statusDiv.innerText = 'Verifying...';
-    statusDiv.style.color = '#666';
+    statusDiv.innerText = 'Verifying license...';
+    statusDiv.className = 'status';
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/verify`, {
@@ -37,16 +33,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (result.valid) {
         await chrome.storage.local.set({ licenseKey: key, isLocked: false });
-        statusDiv.style.color = 'green';
-        statusDiv.innerText = 'Success! Extension activated.';
+        statusDiv.innerText = '✓ Success! Extension activated.';
+        statusDiv.className = 'status success';
         setTimeout(() => window.close(), 1500);
       } else {
-        statusDiv.style.color = 'red';
         statusDiv.innerText = result.message || 'Invalid license key.';
+        statusDiv.className = 'status error';
       }
     } catch (error) {
-      statusDiv.style.color = 'red';
-      statusDiv.innerText = 'Network error. Check connection.';
+      statusDiv.innerText = 'Connection error. Check internet.';
+      statusDiv.className = 'status error';
     }
   });
 });

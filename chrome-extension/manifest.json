@@ -1,17 +1,19 @@
 
 {
   "manifest_version": 3,
-  "name": "GuardExt Protected Extension",
-  "version": "1.0",
-  "description": "Example of an extension protected by GuardExt.",
-  "permissions": ["storage", "alarms"],
+  "name": "Weblock Protection SDK",
+  "version": "1.0.0",
+  "description": "Enterprise-grade security for your Chrome Extension. Remote locking and license management.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": ["https://weblockk.netlify.app/*"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "Weblock License Manager"
   },
   "icons": {
-    "48": "icon.png"
+    "128": "icon128.png"
   }
 }
